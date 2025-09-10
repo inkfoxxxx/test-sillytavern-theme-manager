@@ -1,4 +1,4 @@
-/* 主题仪表盘 (v21.5 Final Checkbox Fix) 样式 */
+/* 主题仪表盘 (v21.6 Adaptive Checkmark) 样式 */
 
 #theme-manager-panel { 
     background-color: var(--blur-tint-color); 
@@ -96,7 +96,6 @@
     display: none;
 }
 
-/* 3. 【核心修改】使用伪元素创建自定义的“对钩 ✔”复选框 */
 #theme-manager-panel.batch-edit-mode .folder-select-checkbox {
     display: inline-block;
     position: relative;
@@ -112,25 +111,23 @@
     transition: background-color 0.2s, border-color 0.2s;
 }
 
-/* 绘制对钩 ✔，但默认状态下是看不见的 */
 #theme-manager-panel.batch-edit-mode .folder-select-checkbox::before {
     content: '✔';
     position: absolute;
-    top: 48%; /* 微调垂直居中 */
+    top: 48%;
     left: 50%;
-    transform: translate(-50%, -50%) scale(0); /* 默认缩小到0，即隐藏 */
+    transform: translate(-50%, -50%) scale(0);
     font-size: 14px;
     font-weight: bold;
-    color: white; /* 对钩颜色设为白色 */
+    /* 【核心修改】使用SillyTavern的自适应对钩颜色变量 */
+    color: var(--SmartThemeCheckboxTickColor, white); /* 默认为白色以防万一 */
     transition: transform 0.1s ease-in-out;
 }
 
-/* 当复选框被选中时，让对钩“出现” */
 #theme-manager-panel.batch-edit-mode .folder-select-checkbox:checked::before {
-    transform: translate(-50%, -50%) scale(1); /* 放大到正常尺寸 */
+    transform: translate(-50%, -50%) scale(1);
 }
 
-/* 4. 文件夹标题被选中时的样式 */
 .theme-category-title.selected-for-batch {
     background-color: var(--primary-color, #0056b3);
     color: white;
@@ -141,11 +138,9 @@
 .theme-category-title.selected-for-batch span {
     color: white;
 }
-/* 确保在深色背景下，未选中的复选框边框清晰可见 */
 .theme-category-title.selected-for-batch .folder-select-checkbox {
     border-color: white;
 }
-/* 当标题被选中时，如果复选框也被选中，让它有一个更明显的背景色 */
 .theme-category-title.selected-for-batch .folder-select-checkbox:checked {
     background-color: rgba(255, 255, 255, 0.3);
 }
