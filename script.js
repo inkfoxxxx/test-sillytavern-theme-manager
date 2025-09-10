@@ -7,7 +7,7 @@
         const saveAsButton = document.querySelector('#ui-preset-save-button');
 
         if (originalSelect && updateButton && saveAsButton && window.SillyTavern?.getContext && !document.querySelector('#theme-manager-panel')) {
-            console.log("Theme Manager (v21.0 Batch Dissolve): 初始化...");
+            console.log("Theme Manager (v21.1 Final Fix): 初始化...");
             clearInterval(initInterval);
 
             try {
@@ -135,7 +135,7 @@
                 let allThemeObjects = [];
                 let isBatchEditMode = false;
                 let selectedForBatch = new Set();
-                let selectedFoldersForBatch = new Set(); // 【新增】用于存储批量选中的文件夹
+                let selectedFoldersForBatch = new Set();
 
                 function setCollapsed(isCollapsed, animate = false) {
                     if (isCollapsed) {
@@ -195,10 +195,8 @@
                             const title = document.createElement('div');
                             title.className = 'theme-category-title';
                             
-                            // 【修改】简化HTML结构，让CSS全权负责显示/隐藏
                             let titleHTML = '';
                             if (category !== '未分类' && category !== '⭐ 收藏夹') {
-                                // 复选框始终在HTML结构中，但默认由CSS隐藏
                                 titleHTML += `<input type="checkbox" class="folder-select-checkbox" title="选择文件夹进行批量操作">`;
                             }
                             titleHTML += `<span>${category}</span>`;
@@ -324,22 +322,15 @@
                     toastr.success('批量删除完成！');
                 }
 
-                // 【新增】批量解散文件夹的逻辑
                 async function performBatchDissolve() {
-                    if (selectedFoldersForBatch.size === 0) {
-                        toastr.info('请先选择至少一个文件夹。');
-                        return;
-                    }
-                    if (!confirm(`确定要解散选中的 ${selectedFoldersForBatch.size} 个文件夹吗？其中的所有主题将被移至“未分类”。`)) {
-                        return;
-                    }
+                    if (selectedFoldersForBatch.size === 0) { toastr.info('请先选择至少一个文件夹。'); return; }
+                    if (!confirm(`确定要解散选中的 ${selectedFoldersForBatch.size} 个文件夹吗？其中的所有主题将被移至“未分类”。`)) return;
 
                     showLoader();
                     let successCount = 0;
                     let errorCount = 0;
                     const themesToProcess = new Map();
 
-                    // 收集所有需要处理的主题
                     selectedFoldersForBatch.forEach(folderName => {
                         openCategoriesAfterRefresh.add(folderName);
                         allParsedThemes.forEach(theme => {
@@ -373,7 +364,6 @@
                     buildThemeUI();
                 }
 
-
                 header.addEventListener('click', (e) => {
                     if (e.target.closest('#native-buttons-container')) return;
                     setCollapsed(content.style.maxHeight !== '0px', true);
@@ -404,10 +394,11 @@
                     batchEditBtn.textContent = isBatchEditMode ? '退出批量编辑' : '🔧 批量编辑';
                     if (!isBatchEditMode) {
                         selectedForBatch.clear();
-                        selectedFoldersForBatch.clear(); // 清空文件夹选择
+                        selectedFoldersForBatch.clear();
                         managerPanel.querySelectorAll('.selected-for-batch').forEach(item => item.classList.remove('selected-for-batch'));
-                        // 【新增】确保文件夹标题的高亮也被移除
+                        // 【修改】同时移除文件夹标题的高亮并取消勾选
                         managerPanel.querySelectorAll('.theme-category-title.selected-for-batch').forEach(item => item.classList.remove('selected-for-batch'));
+                        managerPanel.querySelectorAll('.folder-select-checkbox:checked').forEach(cb => cb.checked = false);
                     }
                 });
 
@@ -493,18 +484,17 @@
                     }
                 });
                 document.querySelector('#batch-delete-btn').addEventListener('click', performBatchDelete);
-                document.querySelector('#batch-dissolve-btn').addEventListener('click', performBatchDissolve); // 【新增】绑定新按钮事件
+                document.querySelector('#batch-dissolve-btn').addEventListener('click', performBatchDissolve);
 
                 contentWrapper.addEventListener('click', async (event) => {
                     const target = event.target;
                     const button = target.closest('button');
                     const themeItem = target.closest('.theme-item');
                     const categoryTitle = target.closest('.theme-category-title');
-                    const folderCheckbox = target.closest('.folder-select-checkbox'); // 【新增】
+                    const folderCheckbox = target.closest('.folder-select-checkbox');
 
-                    // 【新增】处理文件夹复选框点击事件
                     if (isBatchEditMode && folderCheckbox) {
-                        event.stopPropagation();
+                        // 【修改】移除 stopPropagation，让浏览器处理对钩
                         const titleElement = folderCheckbox.closest('.theme-category-title');
                         const categoryName = titleElement.parentElement.dataset.categoryName;
                         if (folderCheckbox.checked) {
