@@ -1,4 +1,4 @@
-/* 主题仪表盘 (v21.2 Final Fix) 样式 */
+/* 主题仪表盘 (v21.3 Final Visual Fix) 样式 */
 
 #theme-manager-panel { 
     background-color: var(--blur-tint-color); 
@@ -26,7 +26,7 @@
 #batch-actions-bar { display: none; flex-wrap: wrap; gap: 8px; background-color: transparent; padding: 0; border-radius: 4px; margin-bottom: 10px; }
 #batch-actions-bar.visible { display: flex; }
 #native-buttons-container { display: flex; gap: 5px; margin-left: auto; }
-.theme-category-title { font-weight: bold; color: var(--quote-color); cursor: pointer; padding: 8px 5px; background-color: rgba(0,0,0,0.15); border-radius: 4px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
+.theme-category-title { font-weight: bold; color: var(--quote-color); cursor: pointer; padding: 8px 5px; background-color: rgba(0,0,0,0.15); border-radius: 4px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s; }
 .dissolve-folder-btn { background: none; border: none; color: var(--danger-color, #ff5555); cursor: pointer; font-size: 14px; opacity: 0.7; }
 
 .theme-list { 
@@ -78,32 +78,62 @@
 .theme-item-buttons button:hover { opacity: 1; transform: scale(1.2); }
 .theme-item:hover .theme-item-buttons button { opacity: 1; }
 
-/* 【批量解散文件夹功能的核心样式修复】 */
+/* ========================================= */
+/* == 【批量编辑模式的核心视觉修复与增强】 == */
+/* ========================================= */
+
+/* 1. 默认隐藏文件夹复选框 */
 #theme-manager-panel .folder-select-checkbox {
     display: none;
-    margin-right: 8px;
 }
 
+/* 2. 只有在批量模式下，才显示复选框，并为整个标题行添加交互提示 */
+#theme-manager-panel.batch-edit-mode .theme-category-title {
+    cursor: pointer; /* 提示整个区域都可点击 */
+}
+#theme-manager-panel.batch-edit-mode .theme-category-title:hover {
+    background-color: rgba(255, 255, 255, 0.1); /* 添加悬停高亮 */
+}
 #theme-manager-panel.batch-edit-mode .folder-select-checkbox {
     display: inline-block;
+    margin-right: 8px;
+    /* 【核心修复】强制重置样式，摆脱SillyTavern原生样式干扰 */
+    -webkit-appearance: none;
+    appearance: none;
+    background-color: transparent;
+    border: 1px solid var(--border-color, #888);
+    border-radius: 3px;
+    width: 15px;
+    height: 15px;
+    transition: background-color 0.2s, border-color 0.2s;
+    position: relative; /* 用于可能的未来伪元素定位 */
+    top: -1px; /* 微调垂直对齐 */
 }
 
+/* 3. 【代替对钩】当复选框被选中时，让它变成一个实心方块 */
+#theme-manager-panel.batch-edit-mode .folder-select-checkbox:checked {
+    background-color: white;
+    border-color: white;
+}
+
+/* 4. 隐藏不相关的按钮，让界面更干净 */
 #theme-manager-panel.batch-edit-mode .dissolve-folder-btn {
     display: none;
 }
 
+/* 5. 文件夹标题被选中时的样式 */
 .theme-category-title.selected-for-batch {
     background-color: var(--primary-color, #0056b3);
     color: white;
 }
-
+.theme-category-title.selected-for-batch:hover {
+    background-color: color-mix(in srgb, var(--primary-color, #0056b3) 90%, white);
+}
 .theme-category-title.selected-for-batch span {
     color: white;
 }
-
-/* 【关键修复】确保复选框在选中时也能获得视觉反馈 */
 .theme-category-title.selected-for-batch .folder-select-checkbox {
-    accent-color: white; /* 改变对钩的颜色 */
+    border-color: white; /* 确保边框在深色背景下可见 */
 }
 
 /* =================================== */
