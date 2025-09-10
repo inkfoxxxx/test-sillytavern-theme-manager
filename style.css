@@ -1,4 +1,4 @@
-/* 主题仪表盘 (v21.0 最终布局完美版) 样式 */
+/* 主题仪表盘 (v21.2 Final Fix) 样式 */
 
 #theme-manager-panel { 
     background-color: var(--blur-tint-color); 
@@ -29,7 +29,6 @@
 .theme-category-title { font-weight: bold; color: var(--quote-color); cursor: pointer; padding: 8px 5px; background-color: rgba(0,0,0,0.15); border-radius: 4px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
 .dissolve-folder-btn { background: none; border: none; color: var(--danger-color, #ff5555); cursor: pointer; font-size: 14px; opacity: 0.7; }
 
-/* 【核心布局修复】强制列表（ul）和列表项（li）的宽度都撑满其父容器 */
 .theme-list { 
     display: flex;
     flex-direction: column;
@@ -80,28 +79,24 @@
 .theme-item:hover .theme-item-buttons button { opacity: 1; }
 
 /* 【批量解散文件夹功能的核心样式修复】 */
-.folder-select-checkbox {
-    display: none; /* 默认隐藏 */
+#theme-manager-panel .folder-select-checkbox {
+    display: none;
     margin-right: 8px;
 }
 
-/* 只有在批量编辑模式下，才显示文件夹的复选框 */
-.batch-edit-mode .folder-select-checkbox {
+#theme-manager-panel.batch-edit-mode .folder-select-checkbox {
     display: inline-block;
 }
 
-/* 在批量编辑模式下，隐藏单次解散按钮，避免混淆 */
-.batch-edit-mode .dissolve-folder-btn {
+#theme-manager-panel.batch-edit-mode .dissolve-folder-btn {
     display: none;
 }
 
-/* 文件夹标题被选中时的样式 */
 .theme-category-title.selected-for-batch {
     background-color: var(--primary-color, #0056b3);
     color: white;
 }
 
-/* 确保选中时，标题内的文字也是白色，以便阅读 */
 .theme-category-title.selected-for-batch span {
     color: white;
 }
