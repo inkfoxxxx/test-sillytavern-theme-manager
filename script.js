@@ -486,17 +486,22 @@
                 document.querySelector('#batch-delete-btn').addEventListener('click', performBatchDelete);
                 document.querySelector('#batch-dissolve-btn').addEventListener('click', performBatchDissolve);
 
-                contentWrapper.addEventListener('click', async (event) => {
+                                contentWrapper.addEventListener('click', async (event) => {
                     const target = event.target;
                     const button = target.closest('button');
                     const themeItem = target.closest('.theme-item');
                     const categoryTitle = target.closest('.theme-category-title');
                     const folderCheckbox = target.closest('.folder-select-checkbox');
 
+                    // 【最终修复】处理文件夹复选框点击
                     if (isBatchEditMode && folderCheckbox) {
-                        // 【修改】移除 stopPropagation，让浏览器处理对钩
+                        // 阻止事件冒泡到 categoryTitle，防止文件夹展开/折叠
+                        event.stopPropagation();
+                        
                         const titleElement = folderCheckbox.closest('.theme-category-title');
                         const categoryName = titleElement.parentElement.dataset.categoryName;
+                        
+                        // 我们直接根据复选框的 checked 状态来更新我们的数据和样式
                         if (folderCheckbox.checked) {
                             selectedFoldersForBatch.add(categoryName);
                             titleElement.classList.add('selected-for-batch');
@@ -504,6 +509,7 @@
                             selectedFoldersForBatch.delete(categoryName);
                             titleElement.classList.remove('selected-for-batch');
                         }
+                        // 因为我们已经处理了所有需要的逻辑，所以直接返回
                         return;
                     }
 
@@ -594,7 +600,6 @@
                         }
                     }
                 });
-
                 originalSelect.addEventListener('change', updateActiveState);
 
                 const observer = new MutationObserver((mutations) => {
@@ -623,3 +628,4 @@
         }
     }, 250);
 })();
+
