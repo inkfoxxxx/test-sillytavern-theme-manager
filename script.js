@@ -15,7 +15,6 @@
                 const FAVORITES_KEY = 'themeManager_favorites';
                 const COLLAPSE_KEY = 'themeManager_collapsed';
                 const CATEGORY_ORDER_KEY = 'themeManager_categoryOrder';
-                const FOLDER_STATE_KEY = 'themeManager_folderState'; // 【新功能】用于记住文件夹展开/折叠状态
 
                 let openCategoriesAfterRefresh = new Set();
                 let allParsedThemes = [];
@@ -153,7 +152,6 @@
                 document.body.appendChild(fileInput);
 
                 let favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY)) || [];
-                let folderStates = JSON.parse(localStorage.getItem(FOLDER_STATE_KEY)) || {};
                 let allThemeObjects = [];
                 let isBatchEditMode = false;
                 let selectedForBatch = new Set();
@@ -270,12 +268,10 @@
                             list.className = 'theme-list';
                             
                             // 【核心修复】恢复并优化逻辑
-                            if (openCategoriesAfterRefresh.size > 0) {
-                                // 如果是操作后刷新，只展开受影响的文件夹
-                                list.style.display = openCategoriesAfterRefresh.has(category) ? 'block' : 'none';
+                            if (openCategoriesAfterRefresh.size > 0 && !openCategoriesAfterRefresh.has(category)) {
+                                list.style.display = 'none';
                             } else {
-                                // 否则，根据保存的状态或默认规则（收藏夹展开）来决定
-                                list.style.display = folderStates[category] === false ? 'none' : 'block';
+                                list.style.display = 'block';
                             }
 
                             themesInCategory.forEach(theme => {
@@ -327,7 +323,6 @@
 
                     getCategoriesForThemes(selectedForBatch).forEach(cat => openCategoriesAfterRefresh.add(cat));
                     selectedForBatch.forEach(name => getTagsFromThemeName(renameLogic(name)).forEach(tag => openCategoriesAfterRefresh.add(tag)));
-
 
                     for (const oldName of selectedForBatch) {
                         try {
@@ -678,12 +673,8 @@
                         } else {
                             if (isReorderMode) return;
                             const list = categoryTitle.nextElementSibling;
-                            const categoryName = categoryTitle.parentElement.dataset.categoryName;
                             if (list) {
-                                const isVisible = list.style.display !== 'none';
-                                list.style.display = isVisible ? 'none' : 'block';
-                                folderStates[categoryName] = !isVisible;
-                                localStorage.setItem(FOLDER_STATE_KEY, JSON.stringify(folderStates));
+                                list.style.display = (list.style.display === 'none') ? 'block' : 'none';
                             }
                         }
                         return;
