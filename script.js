@@ -18,6 +18,16 @@
                 let openCategoriesAfterRefresh = new Set();
                 let allParsedThemes = []; 
 
+                // 【代码优化】为 buildThemeUI 添加防抖函数
+                // 这可以防止因短时间内多次触发 MutationObserver 而导致的性能问题和页面卡死
+                let debounceTimer;
+                const buildThemeUIDebounced = () => {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => {
+                        buildThemeUI();
+                    }, 150); // 150毫秒的延迟足够合并所有来自 reloadThemes 的DOM操作
+                };
+
                 async function apiRequest(endpoint, method = 'POST', body = {}) {
                     try {
                         const headers = getRequestHeaders();
@@ -290,12 +300,11 @@
                         }
                     }
 
+                    // 【核心修复】通知 SillyTavern 重新加载主题。UI刷新将由 MutationObserver 自动处理
+                    await reloadThemes();
+
                     hideLoader();
                     selectedForBatch.clear();
-
-                    // 【核心修复】通知 SillyTavern 重新加载所有主题到内存中，并刷新UI
-                    await reloadThemes();
-                    await buildThemeUI();
                     
                     let summary = `批量操作完成！成功 ${successCount} 个`;
                     if (errorCount > 0) summary += `，失败 ${errorCount} 个`;
@@ -321,13 +330,12 @@
                             originalSelect.dispatchEvent(new Event('change'));
                         }
                     }
+
+                    // 【核心修复】通知 SillyTavern 重新加载主题
+                    await reloadThemes();
+
                     selectedForBatch.clear();
                     hideLoader();
-
-                    // 【核心修复】通知 SillyTavern 重新加载主题并刷新UI
-                    await reloadThemes();
-                    await buildThemeUI();
-
                     toastr.success('批量删除完成！');
                 }
 
@@ -364,16 +372,13 @@
                             console.error(`解散文件夹时处理主题 "${oldName}" 失败:`, error);
                             errorCount++;
                         }
-    
                     }
+                    
+                    // 【核心修复】通知 SillyTavern 重新加载主题
+                    await reloadThemes();
                     
                     hideLoader();
                     selectedFoldersForBatch.clear();
-
-                    // 【核心修复】通知 SillyTavern 重新加载主题并刷新UI
-                    await reloadThemes();
-                    await buildThemeUI();
-                    
                     toastr.success(`批量解散完成！成功处理 ${successCount} 个主题，失败 ${errorCount} 个。`);
                 }
 
@@ -429,7 +434,7 @@
 
                             if (themeObject && themeObject.name && typeof themeObject.main_text_color !== 'undefined') {
                                 await saveTheme(themeObject);
-                                manualUpdateOriginalSelect('add', '', themeObject.name); //【代码优化】手动添加，让观察者能更快反应
+                                manualUpdateOriginalSelect('add', '', themeObject.name);
                                 successCount++;
                             } else {
                                 console.warn(`文件 "${file.name}" 不是一个有效的主题文件，已跳过。`);
@@ -445,11 +450,6 @@
                     await reloadThemes();
                     hideLoader();
                     toastr.success(`批量导入完成！成功 ${successCount} 个，失败 ${errorCount} 个。`);
-                    
-                    // 【代码优化】不再需要强制刷新整个页面
-                    // setTimeout(() => {
-                    //     location.reload();
-                    // }, 1500);
                     
                     event.target.value = ''; 
                 });
@@ -547,7 +547,6 @@
                             await reloadThemes();
                             hideLoader();
                             toastr.success(`文件夹 "${categoryName}" 已解散！`);
-                            // buildThemeUI 将在 MutationObserver 触发时自动调用
                         } else {
                             const list = categoryTitle.nextElementSibling;
                             if (list) list.style.display = (list.style.display === 'none') ? 'block' : 'none';
@@ -600,7 +599,6 @@
                                 // 【核心修复】通知 SillyTavern 重新加载主题
                                 await reloadThemes();
                                 hideLoader();
-                                // buildThemeUI 将在 MutationObserver 触发时自动调用
                             }
                         }
                         else if (button && button.classList.contains('delete-btn')) {
@@ -621,7 +619,6 @@
                                     originalSelect.value = azureOption ? 'Azure' : (originalSelect.options[0]?.value || '');
                                     originalSelect.dispatchEvent(new Event('change'));
                                 }
-                                // buildThemeUI 将在 MutationObserver 触发时自动调用
                             }
                         } else {
                             originalSelect.value = themeName;
@@ -631,20 +628,11 @@
                 });
                 originalSelect.addEventListener('change', updateActiveState);
 
-                const observer = new MutationObserver((mutations) => {
-                    for (let mutation of mutations) {
-                        if (mutation.type === 'childList' && (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0)) {
-                            const addedNode = mutation.addedNodes[0];
-                            if (addedNode && addedNode.tagName === 'OPTION' && addedNode.value) {
-                                toastr.success(`已另存为新主题: "${addedNode.value}"`);
-                                getTagsFromThemeName(addedNode.value).forEach(tag => openCategoriesAfterRefresh.add(tag));
-                            }
-                            // 任何增删改都触发UI重绘，确保数据一致
-                            buildThemeUI(); 
-                            return; 
-                        }
-                    }
+                const observer = new MutationObserver(() => {
+                    // 【核心修复】使用防抖函数调用 UI 刷新
+                    buildThemeUIDebounced();
                 });
+                // 【代码优化】简化监听选项，childList 已经足够
                 observer.observe(originalSelect, { childList: true });
 
                 buildThemeUI().then(() => {
