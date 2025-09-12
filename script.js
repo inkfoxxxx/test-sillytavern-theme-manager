@@ -15,6 +15,7 @@
                 const FAVORITES_KEY = 'themeManager_favorites';
                 const COLLAPSE_KEY = 'themeManager_collapsed';
                 const CATEGORY_ORDER_KEY = 'themeManager_categoryOrder';
+                const COLLAPSED_FOLDERS_KEY = 'themeManager_collapsedFolders';
 
                 let openCategoriesAfterRefresh = new Set();
                 let allParsedThemes = [];
@@ -107,6 +108,10 @@
                             <button id="batch-edit-btn" title="进入/退出批量编辑模式">🔧 批量编辑</button>
                             <button id="batch-import-btn" title="从文件批量导入主题">📂 批量导入</button>
                         </div>
+                        <div class="theme-manager-actions">
+                            <button id="expand-all-btn" title="展开所有文件夹">全部展开</button>
+                            <button id="collapse-all-btn" title="折叠所有文件夹">全部折叠</button>
+                        </div>
                         <div id="batch-actions-bar">
                             <button id="batch-add-tag-btn">➕ 添加标签</button>
                             <button id="batch-move-tag-btn">➡️ 移动到分类</button>
@@ -132,6 +137,8 @@
                 const randomBtn = managerPanel.querySelector('#random-theme-btn');
                 const batchImportBtn = managerPanel.querySelector('#batch-import-btn');
                 const reorderModeBtn = managerPanel.querySelector('#reorder-mode-btn');
+                const expandAllBtn = managerPanel.querySelector('#expand-all-btn');
+                const collapseAllBtn = managerPanel.querySelector('#collapse-all-btn');
                 
                 const refreshNotice = managerPanel.querySelector('#theme-manager-refresh-notice');
                 const refreshBtn = managerPanel.querySelector('#theme-manager-refresh-page-btn');
@@ -231,6 +238,8 @@
                             sortedCategories.push('未分类');
                         }
 
+                        const collapsedFolders = new Set(JSON.parse(localStorage.getItem(COLLAPSED_FOLDERS_KEY)) || []);
+
 
                         sortedCategories.forEach(category => {
                             const themesInCategory = (category === '⭐ 收藏夹') ? allParsedThemes.filter(t => favorites.includes(t.value)) : allParsedThemes.filter(t => t.tags.includes(category));
@@ -268,13 +277,12 @@
                             const list = document.createElement('ul');
                             list.className = 'theme-list';
                             
-                            // 【核心修复】这里是控制文件夹展开/折叠的核心逻辑
+                            // 【核心修复】调整逻辑，优先使用 openCategoriesAfterRefresh
                             if (openCategoriesAfterRefresh.size > 0) {
-                                // 如果 openCategoriesAfterRefresh 有内容, 则只展开在里面的分类
                                 list.style.display = openCategoriesAfterRefresh.has(category) ? 'block' : 'none';
                             } else {
-                                // 否则，所有文件夹都默认展开 (这是为防止观察者意外触发时导致所有文件夹关闭)
-                                list.style.display = 'block';
+                                // 如果没有指定要打开的，则遵循用户保存的折叠状态
+                                list.style.display = collapsedFolders.has(category) ? 'none' : 'block';
                             }
 
                             themesInCategory.forEach(theme => {
@@ -301,8 +309,8 @@
                         contentWrapper.scrollTop = scrollTop;
                         updateActiveState();
                         
-                        // 【核心修复】将 clear() 从这里移到 MutationObserver 中
-                        // openCategoriesAfterRefresh.clear(); 
+                        // 【核心修复】在 buildThemeUI 执行完毕后才清空，确保状态被正确使用
+                        openCategoriesAfterRefresh.clear(); 
 
                     } catch (err) {
                         contentWrapper.innerHTML = '加载主题失败，请检查浏览器控制台获取更多信息。';
@@ -326,9 +334,9 @@
                     let skippedCount = 0;
                     const currentThemes = await getAllThemesFromAPI();
 
-                    // 【核心修复】在批量操作开始前，就设置好哪些文件夹需要展开
+                    // 【核心修复】在操作前清空并设置状态
+                    openCategoriesAfterRefresh.clear();
                     getCategoriesForThemes(selectedForBatch).forEach(cat => openCategoriesAfterRefresh.add(cat));
-                    // 并且，手动计算新标签并添加到展开列表
                     const sampleOldName = Array.from(selectedForBatch)[0];
                     const sampleNewName = renameLogic(sampleOldName);
                     getTagsFromThemeName(sampleNewName).forEach(tag => openCategoriesAfterRefresh.add(tag));
@@ -373,14 +381,14 @@
                     toastr.success(summary);
 
                     showRefreshNotification();
-                    await buildThemeUI(); // 批量操作后手动调用，确保使用我们刚设置的 openCategoriesAfterRefresh
+                    await buildThemeUI(); 
                 }
 
                 async function performBatchDelete() {
                     if (selectedForBatch.size === 0) { toastr.info('请先选择至少一个主题。'); return; }
                     if (!confirm(`确定要删除选中的 ${selectedForBatch.size} 个主题吗？`)) return;
                     
-                    // 【核心修复】提前设置
+                    openCategoriesAfterRefresh.clear(); // 【核心修复】
                     getCategoriesForThemes(selectedForBatch).forEach(cat => openCategoriesAfterRefresh.add(cat));
 
                     showLoader();
@@ -399,7 +407,7 @@
                     toastr.success('批量删除完成！');
                     
                     showRefreshNotification();
-                    await buildThemeUI(); // 手动调用
+                    await buildThemeUI();
                 }
 
                 async function performBatchDissolve() {
@@ -411,6 +419,7 @@
                     let errorCount = 0;
                     const themesToProcess = new Map();
 
+                    openCategoriesAfterRefresh.clear(); // 【核心修复】
                     selectedFoldersForBatch.forEach(folderName => {
                         openCategoriesAfterRefresh.add(folderName);
                         allParsedThemes.forEach(theme => {
@@ -420,7 +429,7 @@
                             }
                         });
                     });
-                    openCategoriesAfterRefresh.add('未分类'); //【核心修复】确保未分类也展开
+                    openCategoriesAfterRefresh.add('未分类');
 
                     for (const [oldName, newName] of themesToProcess.entries()) {
                         try {
@@ -443,7 +452,7 @@
                     toastr.success(`批量解散完成！成功处理 ${successCount} 个主题，失败 ${errorCount} 个。`);
                     
                     showRefreshNotification();
-                    await buildThemeUI(); // 手动调用
+                    buildThemeUI();
                 }
 
                 header.addEventListener('click', (e) => {
@@ -497,6 +506,19 @@
                         managerPanel.querySelectorAll('.theme-category-title.selected-for-batch').forEach(item => item.classList.remove('selected-for-batch'));
                         managerPanel.querySelectorAll('.folder-select-checkbox:checked').forEach(cb => cb.checked = false);
                     }
+                });
+                
+                expandAllBtn.addEventListener('click', () => {
+                    localStorage.setItem(COLLAPSED_FOLDERS_KEY, JSON.stringify([]));
+                    buildThemeUI();
+                });
+                
+                collapseAllBtn.addEventListener('click', () => {
+                    const allFolderNames = Array.from(contentWrapper.querySelectorAll('.theme-category'))
+                        .map(div => div.dataset.categoryName)
+                        .filter(name => name && name !== '⭐ 收藏夹' && name !== '未分类');
+                    localStorage.setItem(COLLAPSED_FOLDERS_KEY, JSON.stringify(allFolderNames));
+                    buildThemeUI();
                 });
 
                 fileInput.addEventListener('change', async (event) => {
@@ -569,7 +591,6 @@
                     if (selectedForBatch.size === 0) { toastr.info('请先选择至少一个主题。'); return; }
                     const tagToRemove = prompt('请输入要移除的标签（等同于将所选美化从以该标签命名的文件夹移出）：');
                     if (tagToRemove && tagToRemove.trim()) {
-                        openCategoriesAfterRefresh.add('未分类'); // 确保“未分类”会展开
                         await performBatchRename(oldName => oldName.replace(`[${tagToRemove.trim()}]`, '').trim());
                     }
                 });
@@ -607,8 +628,7 @@
                             const newFolderName = prompt('请输入新的文件夹名称:', oldFolderName);
 
                             if (newFolderName && newFolderName.trim() && newFolderName !== oldFolderName) {
-                                
-                                // 【核心修复】设置需要展开的文件夹
+                                openCategoriesAfterRefresh.clear(); // 【核心修复】
                                 openCategoriesAfterRefresh.add(newFolderName.trim());
 
                                 showLoader();
@@ -626,7 +646,7 @@
                                 hideLoader();
                                 toastr.success(`文件夹 "${oldFolderName}" 已重命名为 "${newFolderName.trim()}"`);
                                 showRefreshNotification();
-                                await buildThemeUI(); // 手动调用
+                                await buildThemeUI();
                             }
                             return;
                         }
@@ -658,7 +678,7 @@
                             const categoryName = categoryTitle.closest('.theme-category').dataset.categoryName;
                             if (!confirm(`确定要解散文件夹 "${categoryName}" 吗？`)) return;
                             
-                            // 【核心修复】设置需要展开的文件夹
+                            openCategoriesAfterRefresh.clear(); // 【核心修复】
                             openCategoriesAfterRefresh.add(categoryName);
                             openCategoriesAfterRefresh.add('未分类');
 
@@ -675,11 +695,25 @@
                             hideLoader();
                             toastr.success(`文件夹 "${categoryName}" 已解散！`);
                             showRefreshNotification();
-                            await buildThemeUI(); // 手动调用
+                            await buildThemeUI();
                         } else {
                             if (isReorderMode) return;
                             const list = categoryTitle.nextElementSibling;
-                            if (list) list.style.display = (list.style.display === 'none') ? 'block' : 'none';
+                            if (list) {
+                                const isHidden = list.style.display === 'none';
+                                list.style.display = isHidden ? 'block' : 'none';
+                                
+                                const categoryName = categoryTitle.parentElement.dataset.categoryName;
+                                let collapsedFolders = JSON.parse(localStorage.getItem(COLLAPSED_FOLDERS_KEY)) || [];
+                                if (!isHidden) {
+                                    if (!collapsedFolders.includes(categoryName)) {
+                                        collapsedFolders.push(categoryName);
+                                    }
+                                } else {
+                                    collapsedFolders = collapsedFolders.filter(name => name !== categoryName);
+                                }
+                                localStorage.setItem(COLLAPSED_FOLDERS_KEY, JSON.stringify(collapsedFolders));
+                            }
                         }
                         return;
                     }
@@ -699,10 +733,9 @@
                         const categoryName = themeItem.closest('.theme-category').dataset.categoryName;
 
                         if (button && button.classList.contains('favorite-btn')) {
-                            // 【核心修复】设置需要展开的文件夹
+                            openCategoriesAfterRefresh.clear(); // 【核心修复】
                             openCategoriesAfterRefresh.add(categoryName);
                             openCategoriesAfterRefresh.add('⭐ 收藏夹');
-
                             if (favorites.includes(themeName)) {
                                 favorites = favorites.filter(f => f !== themeName);
                                 button.textContent = '☆';
@@ -711,13 +744,13 @@
                                 button.textContent = '★';
                             }
                             localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
-                            await buildThemeUI(); // 手动调用
+                            await buildThemeUI();
                         }
                         else if (button && button.classList.contains('rename-btn')) {
                             const oldName = themeName;
                             const newName = prompt(`请输入新名称：`, oldName);
                             if (newName && newName !== oldName) {
-                                // 【核心修复】设置需要展开的文件夹
+                                openCategoriesAfterRefresh.clear(); // 【核心修复】
                                 openCategoriesAfterRefresh.add(categoryName);
                                 getTagsFromThemeName(newName).forEach(tag => openCategoriesAfterRefresh.add(tag));
 
@@ -725,26 +758,25 @@
                                 if (!themeObject) return;
                                 await saveTheme({ ...themeObject, name: newName });
                                 await deleteTheme(oldName);
-                                manualUpdateOriginalSelect('rename', oldName, newName); // 这将触发观察者
+                                manualUpdateOriginalSelect('rename', oldName, newName);
                                 showRefreshNotification();
-                                // 无需手动调用 buildThemeUI()，交给观察者
+                                // Let the observer handle the buildThemeUI call
                             }
                         }
                         else if (button && button.classList.contains('delete-btn')) {
                             if (confirm(`确定要删除主题 "${themeItem.querySelector('.theme-item-name').textContent}" 吗？`)) {
-                                // 【核心修复】设置需要展开的文件夹
+                                openCategoriesAfterRefresh.clear(); // 【核心修复】
                                 openCategoriesAfterRefresh.add(categoryName);
-
                                 const isCurrentlyActive = originalSelect.value === themeName;
                                 await deleteTheme(themeName);
-                                manualUpdateOriginalSelect('delete', themeName); // 这将触发观察者
+                                manualUpdateOriginalSelect('delete', themeName);
                                 if (isCurrentlyActive) {
                                     const azureOption = originalSelect.querySelector('option[value="Azure"]');
                                     originalSelect.value = azureOption ? 'Azure' : (originalSelect.options[0]?.value || '');
                                     originalSelect.dispatchEvent(new Event('change'));
                                 }
                                 showRefreshNotification();
-                                // 无需手动调用 buildThemeUI()，交给观察者
+                                // Let the observer handle the buildThemeUI call
                             }
                         } else {
                             originalSelect.value = themeName;
@@ -755,22 +787,20 @@
                 originalSelect.addEventListener('change', updateActiveState);
 
                 const observer = new MutationObserver((mutations) => {
+                    // 【核心修复】在观察者触发UI重绘前清空状态，这样只有用户主动操作才会影响折叠
+                    openCategoriesAfterRefresh.clear();
+
                     for (let mutation of mutations) {
-                        if (mutation.type === 'childList' && (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0)) {
-                            const addedNode = mutation.addedNodes[0];
-                            if (addedNode && addedNode.tagName === 'OPTION' && addedNode.value) {
-                                toastr.success(`已另存为新主题: "${addedNode.value}"`);
-                                // 【核心修复】为新保存的主题设置展开
-                                getTagsFromThemeName(addedNode.value).forEach(tag => openCategoriesAfterRefresh.add(tag));
+                        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                            const newNode = mutation.addedNodes[0];
+                            if (newNode.tagName === 'OPTION' && newNode.value) {
+                                toastr.success(`已另存为新主题: "${newNode.value}"`);
+                                getTagsFromThemeName(newNode.value).forEach(tag => openCategoriesAfterRefresh.add(tag));
                                 showRefreshNotification();
+                                break;
                             }
-                            // 任何增删改都触发UI重绘
-                            buildThemeUI(); 
-                            return; 
                         }
                     }
-                    
-                    // 【核心修复】如果只有属性变化（比如重命名），也触发重绘
                     buildThemeUI();
                 });
                 observer.observe(originalSelect, { childList: true, subtree: true, characterData: true });
