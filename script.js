@@ -7,7 +7,7 @@
         const saveAsButton = document.querySelector('#ui-preset-save-button');
 
         if (originalSelect && updateButton && saveAsButton && window.SillyTavern?.getContext && !document.querySelector('#theme-manager-panel')) {
-            console.log("Theme Manager (v25.3 Final Logic Fix): 初始化...");
+            console.log("Theme Manager (v25.4 Final Hot Reload Logic): 初始化...");
             clearInterval(initInterval);
 
             try {
@@ -19,6 +19,7 @@
                 let themeBackgroundBindings = JSON.parse(localStorage.getItem(THEME_BACKGROUND_BINDINGS_KEY)) || {};
                 let isBindingMode = false;
                 let themeNameToBind = null;
+                let allThemeObjects = [];
 
                 async function apiRequest(endpoint, method = 'POST', body = {}) {
                     try {
@@ -46,7 +47,10 @@
                         throw error;
                     }
                 }
-                async function getAllThemesFromAPI() { return (await apiRequest('settings/get', 'POST', {})).themes || []; }
+                async function getAllThemesFromAPI() {
+                    allThemeObjects = (await apiRequest('settings/get', 'POST', {})).themes || [];
+                    return allThemeObjects;
+                }
                 async function deleteTheme(themeName) { return apiRequest('themes/delete', 'POST', { name: themeName }); }
                 async function saveTheme(themeObject) { return apiRequest('themes/save', 'POST', themeObject); }
                 
@@ -269,7 +273,6 @@
 
                 batchImportBtn.addEventListener('click', () => fileInput.click());
 
-                // 【核心修复】批量操作的统一处理函数
                 async function performBatchAction(logic) {
                     showLoader();
                     const allThemes = await getAllThemesFromAPI(); 
@@ -383,6 +386,22 @@
                     }
 
                     if (categoryTitle) {
+                        if (button && button.classList.contains('dissolve-folder-btn')) {
+                            event.stopPropagation();
+                            const categoryName = categoryTitle.closest('.theme-category').dataset.categoryName;
+                            if (!confirm(`确定要解散文件夹 "${categoryName}" 吗？`)) return;
+                            showLoader();
+                            const themes = await getAllThemesFromAPI();
+                            const themesInFolder = themes.filter(t => getTagsFromThemeName(t.name).includes(categoryName));
+                            for (const theme of themesInFolder) {
+                                const newName = theme.name.replace(`[${categoryName}]`, '').trim();
+                                await saveTheme({ ...theme, name: newName });
+                                await deleteTheme(theme.name);
+                            }
+                            hideLoader();
+                            reloadThemes();
+                            return;
+                        }
                         const list = categoryTitle.nextElementSibling;
                         if (list) list.style.display = (list.style.display === 'none') ? 'block' : 'none';
                         return;
@@ -420,6 +439,7 @@
                             delete themeBackgroundBindings[themeName];
                             localStorage.setItem(THEME_BACKGROUND_BINDINGS_KEY, JSON.stringify(themeBackgroundBindings));
                             buildThemeUI();
+
                         }
                         else if (button.classList.contains('rename-btn')) {
                             const oldName = themeName;
