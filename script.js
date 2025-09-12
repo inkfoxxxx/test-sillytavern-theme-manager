@@ -7,20 +7,16 @@
         const saveAsButton = document.querySelector('#ui-preset-save-button');
 
         if (originalSelect && updateButton && saveAsButton && window.SillyTavern?.getContext && !document.querySelector('#theme-manager-panel')) {
-            console.log("Theme Manager (v22.0 Background Binding): 初始化...");
+            console.log("Theme Manager (v21.1 Final Fix): 初始化...");
             clearInterval(initInterval);
 
             try {
                 const { getRequestHeaders, showLoader, hideLoader, reloadThemes } = SillyTavern.getContext();
                 const FAVORITES_KEY = 'themeManager_favorites';
                 const COLLAPSE_KEY = 'themeManager_collapsed';
-                const THEME_BACKGROUND_BINDINGS_KEY = 'themeManager_backgroundBindings'; // 【新增】
 
                 let openCategoriesAfterRefresh = new Set();
-                let allParsedThemes = [];
-                let themeBackgroundBindings = JSON.parse(localStorage.getItem(THEME_BACKGROUND_BINDINGS_KEY)) || {}; // 【新增】
-                let isBindingMode = false; // 【新增】
-                let themeNameToBind = null; // 【新增】
+                let allParsedThemes = []; 
 
                 async function apiRequest(endpoint, method = 'POST', body = {}) {
                     try {
@@ -224,12 +220,9 @@
                                 item.dataset.value = theme.value;
                                 const isFavorited = favorites.includes(theme.value);
                                 const starCharacter = isFavorited ? '★' : '☆';
-                                const isBound = !!themeBackgroundBindings[theme.value]; // 【新增】检查是否绑定
                                 item.innerHTML = `
                                     <span class="theme-item-name">${theme.display}</span>
                                     <div class="theme-item-buttons">
-                                        <button class="bind-bg-btn ${isBound ? 'bound' : ''}" title="绑定背景">🔗</button>
-                                        <button class="unbind-bg-btn" style="display: ${isBound ? 'inline-block' : 'none'}" title="解绑背景">🚫</button>
                                         <button class="favorite-btn" title="收藏">${starCharacter}</button>
                                         <button class="rename-btn" title="重命名">✏️</button>
                                         <button class="delete-btn" title="删除">🗑️</button>
@@ -403,6 +396,7 @@
                         selectedForBatch.clear();
                         selectedFoldersForBatch.clear();
                         managerPanel.querySelectorAll('.selected-for-batch').forEach(item => item.classList.remove('selected-for-batch'));
+                        // 【修改】同时移除文件夹标题的高亮并取消勾选
                         managerPanel.querySelectorAll('.theme-category-title.selected-for-batch').forEach(item => item.classList.remove('selected-for-batch'));
                         managerPanel.querySelectorAll('.folder-select-checkbox:checked').forEach(cb => cb.checked = false);
                     }
@@ -492,17 +486,22 @@
                 document.querySelector('#batch-delete-btn').addEventListener('click', performBatchDelete);
                 document.querySelector('#batch-dissolve-btn').addEventListener('click', performBatchDissolve);
 
-                contentWrapper.addEventListener('click', async (event) => {
+                                contentWrapper.addEventListener('click', async (event) => {
                     const target = event.target;
                     const button = target.closest('button');
                     const themeItem = target.closest('.theme-item');
                     const categoryTitle = target.closest('.theme-category-title');
                     const folderCheckbox = target.closest('.folder-select-checkbox');
 
+                    // 【最终修复】处理文件夹复选框点击
                     if (isBatchEditMode && folderCheckbox) {
+                        // 阻止事件冒泡到 categoryTitle，防止文件夹展开/折叠
                         event.stopPropagation();
+                        
                         const titleElement = folderCheckbox.closest('.theme-category-title');
                         const categoryName = titleElement.parentElement.dataset.categoryName;
+                        
+                        // 我们直接根据复选框的 checked 状态来更新我们的数据和样式
                         if (folderCheckbox.checked) {
                             selectedFoldersForBatch.add(categoryName);
                             titleElement.classList.add('selected-for-batch');
@@ -510,6 +509,7 @@
                             selectedFoldersForBatch.delete(categoryName);
                             titleElement.classList.remove('selected-for-batch');
                         }
+                        // 因为我们已经处理了所有需要的逻辑，所以直接返回
                         return;
                     }
 
@@ -568,19 +568,6 @@
                             localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
                             await buildThemeUI();
                         }
-                        else if (button && button.classList.contains('bind-bg-btn')) { // 【新增】绑定按钮逻辑
-                            isBindingMode = true;
-                            themeNameToBind = themeName;
-                            document.querySelector('#logo_block .drawer-toggle').click();
-                            toastr.info('请在背景面板中选择一张图片进行绑定。', '进入背景绑定模式');
-                        }
-                        else if (button && button.classList.contains('unbind-bg-btn')) { // 【新增】解绑按钮逻辑
-                            delete themeBackgroundBindings[themeName];
-                            localStorage.setItem(THEME_BACKGROUND_BINDINGS_KEY, JSON.stringify(themeBackgroundBindings));
-                            toastr.success(`主题 "${themeItem.querySelector('.theme-item-name').textContent}" 已解绑背景。`);
-                            openCategoriesAfterRefresh.add(categoryName);
-                            await buildThemeUI();
-                        }
                         else if (button && button.classList.contains('rename-btn')) {
                             const oldName = themeName;
                             const newName = prompt(`请输入新名称：`, oldName);
@@ -593,13 +580,6 @@
                                 await saveTheme({ ...themeObject, name: newName });
                                 await deleteTheme(oldName);
                                 manualUpdateOriginalSelect('rename', oldName, newName);
-                                
-                                // 【新增】同步更新背景绑定记录
-                                if(themeBackgroundBindings[oldName]) {
-                                    themeBackgroundBindings[newName] = themeBackgroundBindings[oldName];
-                                    delete themeBackgroundBindings[oldName];
-                                    localStorage.setItem(THEME_BACKGROUND_BINDINGS_KEY, JSON.stringify(themeBackgroundBindings));
-                                }
                             }
                         }
                         else if (button && button.classList.contains('delete-btn')) {
@@ -608,13 +588,6 @@
                                 const isCurrentlyActive = originalSelect.value === themeName;
                                 await deleteTheme(themeName);
                                 manualUpdateOriginalSelect('delete', themeName);
-
-                                // 【新增】同步删除背景绑定记录
-                                if(themeBackgroundBindings[themeName]) {
-                                    delete themeBackgroundBindings[themeName];
-                                    localStorage.setItem(THEME_BACKGROUND_BINDINGS_KEY, JSON.stringify(themeBackgroundBindings));
-                                }
-                                
                                 if (isCurrentlyActive) {
                                     const azureOption = originalSelect.querySelector('option[value="Azure"]');
                                     originalSelect.value = azureOption ? 'Azure' : (originalSelect.options[0]?.value || '');
@@ -627,19 +600,7 @@
                         }
                     }
                 });
-
-                originalSelect.addEventListener('change', (event) => {
-                    updateActiveState();
-                    // 【新增】自动更换背景的核心逻辑
-                    const newThemeName = event.target.value;
-                    const boundBg = themeBackgroundBindings[newThemeName];
-                    if (boundBg) {
-                        const bgElement = document.querySelector(`#bg_menu_content .bg_example[bgfile="${boundBg}"]`);
-                        if (bgElement) {
-                            bgElement.click();
-                        }
-                    }
-                });
+                originalSelect.addEventListener('change', updateActiveState);
 
                 const observer = new MutationObserver((mutations) => {
                     for (let mutation of mutations) {
@@ -656,39 +617,6 @@
                 });
                 observer.observe(originalSelect, { childList: true, subtree: true, characterData: true });
 
-                // 【新增】为背景面板添加事件监听器以处理绑定逻辑
-                const bgMenuContent = document.querySelector('#bg_menu_content');
-                if (bgMenuContent) {
-                    bgMenuContent.addEventListener('click', async (e) => {
-                        if (!isBindingMode) return;
-
-                        e.preventDefault();
-                        e.stopPropagation();
-
-                        const bgElement = e.target.closest('.bg_example');
-                        if (!bgElement) return;
-
-                        const bgFileName = bgElement.getAttribute('bgfile');
-                        themeBackgroundBindings[themeNameToBind] = bgFileName;
-                        localStorage.setItem(THEME_BACKGROUND_BINDINGS_KEY, JSON.stringify(themeBackgroundBindings));
-
-                        toastr.success(`背景已成功绑定到主题！`);
-
-                        // 退出绑定模式
-                        isBindingMode = false;
-                        themeNameToBind = null;
-                        document.querySelector('#logo_block .drawer-toggle').click(); // 关闭背景面板
-
-                        // 刷新UI以显示新的绑定状态
-                        const theme = allParsedThemes.find(t => t.value === bgElement.dataset.themeName);
-                        if (theme) {
-                            getCategoriesForThemes(new Set([bgElement.dataset.themeName])).forEach(cat => openCategoriesAfterRefresh.add(cat));
-                        }
-                        await buildThemeUI();
-                    }, true); // 使用捕获阶段以确保我们的监听器先于SillyTavern的默认行为执行
-                }
-
-
                 buildThemeUI().then(() => {
                     const isInitiallyCollapsed = localStorage.getItem(COLLAPSE_KEY) !== 'false';
                     setCollapsed(isInitiallyCollapsed, false);
@@ -700,3 +628,4 @@
         }
     }, 250);
 })();
+
