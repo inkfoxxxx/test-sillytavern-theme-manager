@@ -12,7 +12,7 @@
 
 #theme-manager-header { cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
 #theme-manager-header:hover { background-color: none; }
-#theme-manager-header h4 { margin: 0; border: none; padding: 0; color: var(--main-text-color); }
+#theme-manager-header h4 { margin: 0; border: none; padding: 0; color: var(--main-text-color); background:none; }
 #theme-manager-toggle-icon { transition: transform 0.3s ease; color: var(--main-text-color); }
 #theme-manager-toggle-icon.collapsed { transform: rotate(-90deg); }
 #theme-manager-content { transition: max-height 0.3s ease-in-out; overflow: hidden; }
@@ -168,6 +168,7 @@
         flex-shrink: 0;
     }
 }
+
 
 
 
