@@ -7,7 +7,7 @@
         const saveAsButton = document.querySelector('#ui-preset-save-button');
 
         if (originalSelect && updateButton && saveAsButton && window.SillyTavern?.getContext && !document.querySelector('#theme-manager-panel')) {
-            console.log("Theme Manager (v25.1 Final Hot Reload Fix): 初始化...");
+            console.log("Theme Manager (v25.2 Final Logic Fix): 初始化...");
             clearInterval(initInterval);
 
             try {
@@ -272,10 +272,11 @@
                 });
 
                 batchImportBtn.addEventListener('click', () => fileInput.click());
-                
+
+                // 【核心修复】批量操作的统一处理函数
                 async function performBatchAction(logic) {
                     showLoader();
-                    const themes = await getAllThemesFromAPI(); // 获取最新数据
+                    const themes = await getAllThemesFromAPI(); // 获取最新、完整的对象数据
                     for (const oldName of selectedForBatch) {
                         try {
                             const themeObject = themes.find(t => t.name === oldName);
@@ -290,13 +291,14 @@
                     hideLoader();
                     reloadThemes();
                 }
-                
+
                 document.querySelector('#batch-add-tag-btn').addEventListener('click', async () => {
                     if (selectedForBatch.size === 0) { toastr.info('请先选择至少一个主题。'); return; }
                     const newTag = prompt('请输入要添加的新标签（文件夹名）：');
                     if (newTag && newTag.trim()) {
                         await performBatchAction(async (oldName, themeObject) => {
                             const newName = `[${newTag.trim()}] ${oldName}`;
+                            // 【核心修复】使用完整的 themeObject 进行保存
                             await saveTheme({ ...themeObject, name: newName });
                             await deleteTheme(oldName);
                         });
@@ -312,6 +314,7 @@
                         if (!sanitizedTag) { toastr.error('过滤后的分类名为空，操作已取消。'); return; }
                         await performBatchAction(async (oldName, themeObject) => {
                             const newName = `[${sanitizedTag}] ${oldName.replace(/\[.*?\]/g, '').trim()}`;
+                            // 【核心修复】使用完整的 themeObject 进行保存
                             await saveTheme({ ...themeObject, name: newName });
                             await deleteTheme(oldName);
                         });
@@ -324,6 +327,7 @@
                     if (tagToRemove && tagToRemove.trim()) {
                         await performBatchAction(async (oldName, themeObject) => {
                             const newName = oldName.replace(`[${tagToRemove.trim()}]`, '').trim();
+                             // 【核心修复】使用完整的 themeObject 进行保存
                             await saveTheme({ ...themeObject, name: newName });
                             await deleteTheme(oldName);
                         });
@@ -333,9 +337,12 @@
                 document.querySelector('#batch-delete-btn').addEventListener('click', async () => {
                     if (selectedForBatch.size === 0) { toastr.info('请先选择至少一个主题。'); return; }
                     if (!confirm(`确定要删除选中的 ${selectedForBatch.size} 个主题吗？`)) return;
-                    await performBatchAction(async (themeName) => {
+                    showLoader();
+                    for(const themeName of selectedForBatch){
                         await deleteTheme(themeName);
-                    });
+                    }
+                    hideLoader();
+                    reloadThemes();
                 });
                 
                 document.querySelector('#batch-dissolve-btn').addEventListener('click', async () => {
@@ -359,6 +366,7 @@
                      hideLoader();
                      reloadThemes();
                 });
+
 
                 contentWrapper.addEventListener('click', async (event) => {
                     const target = event.target;
@@ -389,15 +397,14 @@
 
                     if (!themeItem) return;
                     
+                    const themeName = themeItem.dataset.value;
                     if (isBatchEditMode) {
                         themeItem.classList.toggle('selected-for-batch');
-                        const themeName = themeItem.dataset.value;
                         if (selectedForBatch.has(themeName)) selectedForBatch.delete(themeName);
                         else selectedForBatch.add(themeName);
                         return;
                     }
                     
-                    const themeName = themeItem.dataset.value;
                     if (button) {
                         event.stopPropagation();
                         if (button.classList.contains('favorite-btn')) {
@@ -450,7 +457,7 @@
                                 reloadThemes();
                             }
                         }
-                    } else { // Click on the item itself
+                    } else { 
                         originalSelect.value = themeName;
                         originalSelect.dispatchEvent(new Event('change'));
                     }
