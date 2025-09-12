@@ -3,8 +3,6 @@
 #theme-manager-panel { 
     background-color: var(--blur-tint-color); 
     border-radius: 8px; 
-    padding: 10px; 
-    margin-top: 10px; 
     border: 1px solid var(--border-color); 
     width: 100%; 
     box-sizing: border-box;
@@ -13,7 +11,7 @@
 }
 
 #theme-manager-header { cursor: pointer; padding: 5px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
-#theme-manager-header:hover { background-color: rgba(0,0,0,0.1); }
+#theme-manager-header:hover { background-color: none; }
 #theme-manager-header h4 { margin: 0; border: none; padding: 0; color: var(--main-text-color); }
 #theme-manager-toggle-icon { transition: transform 0.3s ease; color: var(--main-text-color); }
 #theme-manager-toggle-icon.collapsed { transform: rotate(-90deg); }
@@ -170,5 +168,6 @@
         flex-shrink: 0;
     }
 }
+
 
 
