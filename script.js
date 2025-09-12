@@ -15,6 +15,7 @@
                 const FAVORITES_KEY = 'themeManager_favorites';
                 const COLLAPSE_KEY = 'themeManager_collapsed';
                 const CATEGORY_ORDER_KEY = 'themeManager_categoryOrder';
+                const FOLDER_STATE_KEY = 'themeManager_folderState'; // 【新功能】用于记住文件夹展开/折叠状态
 
                 let openCategoriesAfterRefresh = new Set();
                 let allParsedThemes = [];
@@ -131,7 +132,7 @@
                 const searchBox = managerPanel.querySelector('#theme-search-box');
                 const randomBtn = managerPanel.querySelector('#random-theme-btn');
                 const batchImportBtn = managerPanel.querySelector('#batch-import-btn');
-                const reorderModeBtn = managerPanel.querySelector('#reorder-mode-btn'); 
+                const reorderModeBtn = managerPanel.querySelector('#reorder-mode-btn');
                 
                 const refreshNotice = managerPanel.querySelector('#theme-manager-refresh-notice');
                 const refreshBtn = managerPanel.querySelector('#theme-manager-refresh-page-btn');
@@ -152,6 +153,7 @@
                 document.body.appendChild(fileInput);
 
                 let favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY)) || [];
+                let folderStates = JSON.parse(localStorage.getItem(FOLDER_STATE_KEY)) || {};
                 let allThemeObjects = [];
                 let isBatchEditMode = false;
                 let selectedForBatch = new Set();
@@ -267,13 +269,13 @@
                             const list = document.createElement('ul');
                             list.className = 'theme-list';
                             
-                            // 【核心修复】修正文件夹展开/折叠的逻辑
+                            // 【核心修复】恢复并优化逻辑
                             if (openCategoriesAfterRefresh.size > 0) {
                                 // 如果是操作后刷新，只展开受影响的文件夹
                                 list.style.display = openCategoriesAfterRefresh.has(category) ? 'block' : 'none';
                             } else {
-                                // 否则，默认只展开收藏夹
-                                list.style.display = category === '⭐ 收藏夹' ? 'block' : 'none';
+                                // 否则，根据保存的状态或默认规则（收藏夹展开）来决定
+                                list.style.display = folderStates[category] === false ? 'none' : 'block';
                             }
 
                             themesInCategory.forEach(theme => {
@@ -323,7 +325,6 @@
                     let skippedCount = 0;
                     const currentThemes = await getAllThemesFromAPI();
 
-                    // 【核心修改】在批量操作前记录所有受影响的文件夹
                     getCategoriesForThemes(selectedForBatch).forEach(cat => openCategoriesAfterRefresh.add(cat));
                     selectedForBatch.forEach(name => getTagsFromThemeName(renameLogic(name)).forEach(tag => openCategoriesAfterRefresh.add(tag)));
 
@@ -677,7 +678,13 @@
                         } else {
                             if (isReorderMode) return;
                             const list = categoryTitle.nextElementSibling;
-                            if (list) list.style.display = (list.style.display === 'none') ? 'block' : 'none';
+                            const categoryName = categoryTitle.parentElement.dataset.categoryName;
+                            if (list) {
+                                const isVisible = list.style.display !== 'none';
+                                list.style.display = isVisible ? 'none' : 'block';
+                                folderStates[categoryName] = !isVisible;
+                                localStorage.setItem(FOLDER_STATE_KEY, JSON.stringify(folderStates));
+                            }
                         }
                         return;
                     }
