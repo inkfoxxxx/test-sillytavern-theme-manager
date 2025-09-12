@@ -1,5 +1,5 @@
 (function () {
-    'use strict';
+    'must use';
 
     const initInterval = setInterval(() => {
         const originalSelect = document.querySelector('#themes');
@@ -11,22 +11,14 @@
             clearInterval(initInterval);
 
             try {
-                const { getRequestHeaders, showLoader, hideLoader, reloadThemes } = SillyTavern.getContext();
+                // 【核心修改】移除了 reloadThemes，因为它导致了问题
+                const { getRequestHeaders, showLoader, hideLoader } = SillyTavern.getContext();
                 const FAVORITES_KEY = 'themeManager_favorites';
                 const COLLAPSE_KEY = 'themeManager_collapsed';
 
                 let openCategoriesAfterRefresh = new Set();
-                let allParsedThemes = []; 
-
-                // 【代码优化】为 buildThemeUI 添加防抖函数
-                // 这可以防止因短时间内多次触发 MutationObserver 而导致的性能问题和页面卡死
-                let debounceTimer;
-                const buildThemeUIDebounced = () => {
-                    clearTimeout(debounceTimer);
-                    debounceTimer = setTimeout(() => {
-                        buildThemeUI();
-                    }, 150); // 150毫秒的延迟足够合并所有来自 reloadThemes 的DOM操作
-                };
+                let allParsedThemes = [];
+                let refreshNeeded = false; // 【核心修改】用于追踪是否需要刷新的状态旗帜
 
                 async function apiRequest(endpoint, method = 'POST', body = {}) {
                     try {
@@ -109,6 +101,11 @@
                             <button id="batch-edit-btn" title="进入/退出批量编辑模式">🔧 批量编辑</button>
                             <button id="batch-import-btn" title="从文件批量导入主题">📂 批量导入</button>
                         </div>
+                        <!-- 【核心修改】添加刷新提示区域 -->
+                        <div id="theme-manager-refresh-notice" style="display:none; margin:10px 0; padding: 8px; background-color: rgba(255, 165, 0, 0.2); border: 1px solid orange; border-radius: 4px; text-align: center;">
+                            💡 <b>提示：</b>检测到主题文件变更。为确保所有更改完全生效，请在完成所有操作后
+                            <button id="theme-manager-refresh-page-btn" style="border:none; background:none; color:var(--primary-color, #007bff); text-decoration:underline; cursor:pointer; padding:0 5px;">刷新页面</button>。
+                        </div>
                         <div id="batch-actions-bar">
                             <button id="batch-add-tag-btn">➕ 添加标签</button>
                             <button id="batch-move-tag-btn">➡️ 移动到分类</button>
@@ -133,6 +130,19 @@
                 const searchBox = managerPanel.querySelector('#theme-search-box');
                 const randomBtn = managerPanel.querySelector('#random-theme-btn');
                 const batchImportBtn = managerPanel.querySelector('#batch-import-btn');
+                
+                // 【核心修改】获取提示元素并绑定事件
+                const refreshNotice = managerPanel.querySelector('#theme-manager-refresh-notice');
+                const refreshBtn = managerPanel.querySelector('#theme-manager-refresh-page-btn');
+                refreshBtn.addEventListener('click', () => location.reload());
+
+                // 【核心修改】显示刷新提示的函数
+                function showRefreshNotification() {
+                    if (!refreshNeeded) {
+                        refreshNeeded = true;
+                        refreshNotice.style.display = 'block';
+                    }
+                }
 
                 const fileInput = document.createElement('input');
                 fileInput.type = 'file';
@@ -300,9 +310,6 @@
                         }
                     }
 
-                    // 【核心修复】通知 SillyTavern 重新加载主题。UI刷新将由 MutationObserver 自动处理
-                    await reloadThemes();
-
                     hideLoader();
                     selectedForBatch.clear();
                     
@@ -311,6 +318,10 @@
                     if (skippedCount > 0) summary += `，跳过 ${skippedCount} 个`;
                     summary += '。';
                     toastr.success(summary);
+
+                    // 【核心修改】显示刷新提示
+                    showRefreshNotification();
+                    await buildThemeUI(); 
                 }
 
                 async function performBatchDelete() {
@@ -330,13 +341,13 @@
                             originalSelect.dispatchEvent(new Event('change'));
                         }
                     }
-
-                    // 【核心修复】通知 SillyTavern 重新加载主题
-                    await reloadThemes();
-
                     selectedForBatch.clear();
                     hideLoader();
                     toastr.success('批量删除完成！');
+                    
+                    // 【核心修改】显示刷新提示
+                    showRefreshNotification();
+                    await buildThemeUI();
                 }
 
                 async function performBatchDissolve() {
@@ -350,299 +361,4 @@
 
                     selectedFoldersForBatch.forEach(folderName => {
                         openCategoriesAfterRefresh.add(folderName);
-                        allParsedThemes.forEach(theme => {
-                            if (theme.tags.includes(folderName)) {
-                                const newName = theme.value.replace(`[${folderName}]`, '').trim();
-                                themesToProcess.set(theme.value, newName);
-                            }
-                        });
-                    });
-                    openCategoriesAfterRefresh.add('未分类');
-
-                    for (const [oldName, newName] of themesToProcess.entries()) {
-                        try {
-                            const themeObject = allThemeObjects.find(t => t.name === oldName);
-                            if (themeObject) {
-                                await saveTheme({ ...themeObject, name: newName });
-                                await deleteTheme(oldName);
-                                manualUpdateOriginalSelect('rename', oldName, newName);
-                                successCount++;
-                            }
-                        } catch(error) {
-                            console.error(`解散文件夹时处理主题 "${oldName}" 失败:`, error);
-                            errorCount++;
-                        }
-                    }
-                    
-                    // 【核心修复】通知 SillyTavern 重新加载主题
-                    await reloadThemes();
-                    
-                    hideLoader();
-                    selectedFoldersForBatch.clear();
-                    toastr.success(`批量解散完成！成功处理 ${successCount} 个主题，失败 ${errorCount} 个。`);
-                }
-
-                header.addEventListener('click', (e) => {
-                    if (e.target.closest('#native-buttons-container')) return;
-                    setCollapsed(content.style.maxHeight !== '0px', true);
-                });
-
-                searchBox.addEventListener('input', (e) => {
-                    const searchTerm = e.target.value.toLowerCase();
-                    managerPanel.querySelectorAll('.theme-item').forEach(item => {
-                        const isVisible = item.querySelector('.theme-item-name').textContent.toLowerCase().includes(searchTerm);
-                        item.style.display = isVisible ? 'flex' : 'none';
-                    });
-                });
-
-                randomBtn.addEventListener('click', async () => {
-                    const themes = await getAllThemesFromAPI();
-                    if (themes.length > 0) {
-                        const randomIndex = Math.floor(Math.random() * themes.length);
-                        originalSelect.value = themes[randomIndex].name;
-                        originalSelect.dispatchEvent(new Event('change'));
-                    }
-                });
-
-                batchEditBtn.addEventListener('click', () => {
-                    isBatchEditMode = !isBatchEditMode;
-                    managerPanel.classList.toggle('batch-edit-mode', isBatchEditMode);
-                    batchActionsBar.classList.toggle('visible', isBatchEditMode);
-                    batchEditBtn.classList.toggle('selected', isBatchEditMode);
-                    batchEditBtn.textContent = isBatchEditMode ? '退出批量编辑' : '🔧 批量编辑';
-                    if (!isBatchEditMode) {
-                        selectedForBatch.clear();
-                        selectedFoldersForBatch.clear();
-                        managerPanel.querySelectorAll('.selected-for-batch').forEach(item => item.classList.remove('selected-for-batch'));
-                        managerPanel.querySelectorAll('.theme-category-title.selected-for-batch').forEach(item => item.classList.remove('selected-for-batch'));
-                        managerPanel.querySelectorAll('.folder-select-checkbox:checked').forEach(cb => cb.checked = false);
-                    }
-                });
-
-                fileInput.addEventListener('change', async (event) => {
-                    const files = event.target.files;
-                    if (!files.length) return;
-
-                    showLoader();
-                    let successCount = 0;
-                    let errorCount = 0;
-
-                    for (const file of files) {
-                        try {
-                            const fileContent = await file.text();
-                            const themeObject = JSON.parse(fileContent);
-
-                            if (themeObject && themeObject.name && typeof themeObject.main_text_color !== 'undefined') {
-                                await saveTheme(themeObject);
-                                manualUpdateOriginalSelect('add', '', themeObject.name);
-                                successCount++;
-                            } else {
-                                console.warn(`文件 "${file.name}" 不是一个有效的主题文件，已跳过。`);
-                                errorCount++;
-                            }
-                        } catch (err) {
-                            console.error(`处理文件 "${file.name}" 时出错:`, err);
-                            errorCount++;
-                        }
-                    }
-
-                    // 【核心修复】通知 SillyTavern 热重载
-                    await reloadThemes();
-                    hideLoader();
-                    toastr.success(`批量导入完成！成功 ${successCount} 个，失败 ${errorCount} 个。`);
-                    
-                    event.target.value = ''; 
-                });
-
-                batchImportBtn.addEventListener('click', () => {
-                    fileInput.click();
-                });
-
-                document.querySelector('#batch-add-tag-btn').addEventListener('click', async () => {
-                    if (selectedForBatch.size === 0) { toastr.info('请先选择至少一个主题。'); return; }
-                    const newTag = prompt('请输入要添加的新标签（文件夹名）：');
-                    if (newTag && newTag.trim()) {
-                        getCategoriesForThemes(selectedForBatch).forEach(cat => openCategoriesAfterRefresh.add(cat));
-                        openCategoriesAfterRefresh.add(newTag.trim());
-                        await performBatchRename(oldName => `[${newTag.trim()}] ${oldName}`);
-                    }
-                });
-                
-                document.querySelector('#batch-move-tag-btn').addEventListener('click', async () => {
-                    if (selectedForBatch.size === 0) { toastr.info('请先选择至少一个主题。'); return; }
-                    const targetTag = prompt('请输入要移动到的目标分类（文件夹名）：');
-                    
-                    if (targetTag && targetTag.trim()) {
-                        const sanitizedTag = targetTag.trim().replace(/[\\/:*?"<>|]/g, '');
-                        if (sanitizedTag !== targetTag.trim()) {
-                            toastr.warning(`分类名包含非法字符，已自动过滤为: "${sanitizedTag}"`);
-                        }
-                        if (!sanitizedTag) {
-                            toastr.error('过滤后的分类名为空，操作已取消。');
-                            return;
-                        }
-                        
-                        getCategoriesForThemes(selectedForBatch).forEach(cat => openCategoriesAfterRefresh.add(cat));
-                        openCategoriesAfterRefresh.add(sanitizedTag);
-                        
-                        await performBatchRename(oldName => `[${sanitizedTag}] ${oldName.replace(/\[.*?\]/g, '').trim()}`);
-                    }
-                });
-
-                document.querySelector('#batch-delete-tag-btn').addEventListener('click', async () => {
-                    if (selectedForBatch.size === 0) { toastr.info('请先选择至少一个主题。'); return; }
-                    const tagToRemove = prompt('请输入要移除的标签（等同于将所选美化从以该标签命名的文件夹移出）：');
-                    if (tagToRemove && tagToRemove.trim()) {
-                        getCategoriesForThemes(selectedForBatch).forEach(cat => openCategoriesAfterRefresh.add(cat));
-                        openCategoriesAfterRefresh.add(tagToRemove.trim());
-                        openCategoriesAfterRefresh.add('未分类');
-                        await performBatchRename(oldName => oldName.replace(`[${tagToRemove.trim()}]`, '').trim());
-                    }
-                });
-                document.querySelector('#batch-delete-btn').addEventListener('click', performBatchDelete);
-                document.querySelector('#batch-dissolve-btn').addEventListener('click', performBatchDissolve);
-
-                contentWrapper.addEventListener('click', async (event) => {
-                    const target = event.target;
-                    const button = target.closest('button');
-                    const themeItem = target.closest('.theme-item');
-                    const categoryTitle = target.closest('.theme-category-title');
-                    const folderCheckbox = target.closest('.folder-select-checkbox');
-
-                    if (isBatchEditMode && folderCheckbox) {
-                        event.stopPropagation();
-                        const titleElement = folderCheckbox.closest('.theme-category-title');
-                        const categoryName = titleElement.parentElement.dataset.categoryName;
-                        if (folderCheckbox.checked) {
-                            selectedFoldersForBatch.add(categoryName);
-                            titleElement.classList.add('selected-for-batch');
-                        } else {
-                            selectedFoldersForBatch.delete(categoryName);
-                            titleElement.classList.remove('selected-for-batch');
-                        }
-                        return;
-                    }
-
-                    if (categoryTitle) {
-                        if (button && button.classList.contains('dissolve-folder-btn')) {
-                            event.stopPropagation();
-                            const categoryName = categoryTitle.closest('.theme-category').dataset.categoryName;
-                            if (!confirm(`确定要解散文件夹 "${categoryName}" 吗？`)) return;
-                            
-                            openCategoriesAfterRefresh.add(categoryName);
-                            openCategoriesAfterRefresh.add('未分类');
-
-                            showLoader();
-                            const themesToUpdate = Array.from(originalSelect.options).map(opt => opt.value).filter(name => name.includes(`[${categoryName}]`));
-                            for (const oldName of themesToUpdate) {
-                                const themeObject = allThemeObjects.find(t => t.name === oldName);
-                                if (!themeObject) continue;
-                                const newName = oldName.replace(`[${categoryName}]`, '').trim();
-                                await saveTheme({ ...themeObject, name: newName });
-                                await deleteTheme(oldName);
-                                manualUpdateOriginalSelect('rename', oldName, newName);
-                            }
-
-                            // 【核心修复】通知 SillyTavern 重新加载主题
-                            await reloadThemes();
-                            hideLoader();
-                            toastr.success(`文件夹 "${categoryName}" 已解散！`);
-                        } else {
-                            const list = categoryTitle.nextElementSibling;
-                            if (list) list.style.display = (list.style.display === 'none') ? 'block' : 'none';
-                        }
-                        return;
-                    }
-
-                    if (!themeItem) return;
-                    const themeName = themeItem.dataset.value;
-
-                    if (isBatchEditMode) {
-                        if (selectedForBatch.has(themeName)) {
-                            selectedForBatch.delete(themeName);
-                            themeItem.classList.remove('selected-for-batch');
-                        } else {
-                            selectedForBatch.add(themeName);
-                            themeItem.classList.add('selected-for-batch');
-                        }
-                    } else {
-                        const categoryName = themeItem.closest('.theme-category').dataset.categoryName;
-
-                        if (button && button.classList.contains('favorite-btn')) {
-                            openCategoriesAfterRefresh.add(categoryName);
-                            openCategoriesAfterRefresh.add('⭐ 收藏夹');
-                            if (favorites.includes(themeName)) {
-                                favorites = favorites.filter(f => f !== themeName);
-                                button.textContent = '☆';
-                            } else {
-                                favorites.push(themeName);
-                                button.textContent = '★';
-                            }
-                            localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
-                            await buildThemeUI();
-                        }
-                        else if (button && button.classList.contains('rename-btn')) {
-                            const oldName = themeName;
-                            const newName = prompt(`请输入新名称：`, oldName);
-                            if (newName && newName !== oldName) {
-                                openCategoriesAfterRefresh.add(categoryName);
-                                getTagsFromThemeName(newName).forEach(tag => openCategoriesAfterRefresh.add(tag));
-
-                                const themeObject = allThemeObjects.find(t => t.name === oldName);
-                                if (!themeObject) return;
-
-                                showLoader();
-                                await saveTheme({ ...themeObject, name: newName });
-                                await deleteTheme(oldName);
-                                manualUpdateOriginalSelect('rename', oldName, newName);
-                                
-                                // 【核心修复】通知 SillyTavern 重新加载主题
-                                await reloadThemes();
-                                hideLoader();
-                            }
-                        }
-                        else if (button && button.classList.contains('delete-btn')) {
-                            if (confirm(`确定要删除主题 "${themeItem.querySelector('.theme-item-name').textContent}" 吗？`)) {
-                                openCategoriesAfterRefresh.add(categoryName);
-                                const isCurrentlyActive = originalSelect.value === themeName;
-
-                                showLoader();
-                                await deleteTheme(themeName);
-                                manualUpdateOriginalSelect('delete', themeName);
-                                
-                                // 【核心修复】通知 SillyTavern 重新加载主题
-                                await reloadThemes();
-                                hideLoader();
-
-                                if (isCurrentlyActive) {
-                                    const azureOption = originalSelect.querySelector('option[value="Azure"]');
-                                    originalSelect.value = azureOption ? 'Azure' : (originalSelect.options[0]?.value || '');
-                                    originalSelect.dispatchEvent(new Event('change'));
-                                }
-                            }
-                        } else {
-                            originalSelect.value = themeName;
-                            originalSelect.dispatchEvent(new Event('change'));
-                        }
-                    }
-                });
-                originalSelect.addEventListener('change', updateActiveState);
-
-                const observer = new MutationObserver(() => {
-                    // 【核心修复】使用防抖函数调用 UI 刷新
-                    buildThemeUIDebounced();
-                });
-                // 【代码优化】简化监听选项，childList 已经足够
-                observer.observe(originalSelect, { childList: true });
-
-                buildThemeUI().then(() => {
-                    const isInitiallyCollapsed = localStorage.getItem(COLLAPSE_KEY) !== 'false';
-                    setCollapsed(isInitiallyCollapsed, false);
-                });
-
-            } catch (error) {
-                console.error("Theme Manager: 初始化过程中发生错误:", error);
-            }
-        }
-    }, 250);
-})();
+                        al
