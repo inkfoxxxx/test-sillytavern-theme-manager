@@ -28,6 +28,32 @@
 .theme-category-title { font-weight: bold; color: var(--quote-color); cursor: pointer; padding: 8px 5px; background-color: rgba(0,0,0,0.15); border-radius: 4px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s; }
 .dissolve-folder-btn { background: none; border: none; color: var(--danger-color, #ff5555); cursor: pointer; font-size: 14px; opacity: 0.7; }
 
+/* 【新功能】为文件夹重命名按钮（铅笔图标）去除背景和边框 */
+.rename-folder-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px; /* 调整图标大小，使其与其他图标协调 */
+    opacity: 0.7;    /* 默认设为半透明，悬停时变清晰 */
+    padding: 2px 5px; /* 给予一些点击区域，但不过多 */
+    color: var(--main-text-color); /* 确保图标颜色和主题文本颜色一致 */
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+/* 鼠标悬停在重命名或解散按钮上时的效果 */
+.rename-folder-btn:hover,
+.dissolve-folder-btn:hover {
+    opacity: 1;
+    transform: scale(1.2);
+}
+
+/* 【代码优化】将重命名和解散按钮组合到一个容器中，方便布局 */
+.folder-buttons {
+    display: flex;
+    gap: 8px; /* 按钮之间的间距 */
+    align-items: center;
+}
+
 .theme-list { 
     display: flex;
     flex-direction: column;
@@ -169,6 +195,7 @@
         flex-shrink: 0;
     }
 }
+
 
 
 
