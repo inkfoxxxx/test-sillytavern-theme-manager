@@ -16,6 +16,7 @@
 #theme-manager-toggle-icon { transition: transform 0.3s ease; color: var(--main-text-color); }
 #theme-manager-toggle-icon.collapsed { transform: rotate(-90deg); }
 #theme-manager-content { transition: max-height 0.3s ease-in-out; overflow: hidden; }
+#UI-presets-block { gap: 0 !important; }
 .theme-manager-actions { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
 .theme-manager-actions input[type="search"] { flex-grow: 1; background-color: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--main-text-color); border-radius: 4px; padding: 5px 8px; min-width: 150px; }
 .theme-manager-actions button, #batch-actions-bar button { background-color: rgba(128,128,128,0.2); color: var(--main-text-color); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; white-space: nowrap; }
@@ -168,6 +169,7 @@
         flex-shrink: 0;
     }
 }
+
 
 
 
