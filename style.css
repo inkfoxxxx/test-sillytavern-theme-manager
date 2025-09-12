@@ -11,7 +11,8 @@
 }
 
 #theme-manager-header { cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
-#theme-manager-header:hover { background-color: none; }
+/* 【代码优化】您将 :hover 的背景设为 none，为保持交互感，我将其改为透明色，这样不会影响布局 */
+#theme-manager-header:hover { background-color: rgba(0,0,0,0.05); } 
 #theme-manager-header h4 { margin: 0; border: none; padding: 0; color: var(--main-text-color); background:none; }
 #theme-manager-toggle-icon { transition: transform 0.3s ease; color: var(--main-text-color); }
 #theme-manager-toggle-icon.collapsed { transform: rotate(-90deg); }
@@ -28,15 +29,15 @@
 .theme-category-title { font-weight: bold; color: var(--quote-color); cursor: pointer; padding: 8px 5px; background-color: rgba(0,0,0,0.15); border-radius: 4px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s; }
 .dissolve-folder-btn { background: none; border: none; color: var(--danger-color, #ff5555); cursor: pointer; font-size: 14px; opacity: 0.7; }
 
-/* 【新功能】为文件夹重命名按钮（铅笔图标）去除背景和边框 */
+/* 为文件夹重命名按钮（铅笔图标）去除背景和边框 */
 .rename-folder-btn {
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 16px; /* 调整图标大小，使其与其他图标协调 */
-    opacity: 0.7;    /* 默认设为半透明，悬停时变清晰 */
-    padding: 2px 5px; /* 给予一些点击区域，但不过多 */
-    color: var(--main-text-color); /* 确保图标颜色和主题文本颜色一致 */
+    font-size: 16px; 
+    opacity: 0.7;
+    padding: 2px 5px;
+    color: var(--main-text-color);
     transition: opacity 0.2s, transform 0.2s;
 }
 
@@ -47,10 +48,10 @@
     transform: scale(1.2);
 }
 
-/* 【代码优化】将重命名和解散按钮组合到一个容器中，方便布局 */
+/* 将重命名和解散按钮组合到一个容器中，方便布局 */
 .folder-buttons {
     display: flex;
-    gap: 8px; /* 按钮之间的间距 */
+    gap: 8px;
     align-items: center;
 }
 
@@ -117,7 +118,9 @@
 #theme-manager-panel.batch-edit-mode .theme-category-title:hover {
     background-color: rgba(255, 255, 255, 0.1);
 }
-#theme-manager-panel.batch-edit-mode .dissolve-folder-btn {
+
+/* 【代码优化】在批量编辑模式下，也隐藏文件夹按钮 */
+#theme-manager-panel.batch-edit-mode .folder-buttons {
     display: none;
 }
 
@@ -144,8 +147,7 @@
     transform: translate(-50%, -50%) scale(0);
     font-size: 14px;
     font-weight: bold;
-    /* 【核心修改】使用SillyTavern的自适应对钩颜色变量 */
-    color: var(--SmartThemeCheckboxTickColor, white); /* 默认为白色以防万一 */
+    color: var(--SmartThemeCheckboxTickColor, white);
     transition: transform 0.1s ease-in-out;
 }
 
@@ -168,6 +170,33 @@
 }
 .theme-category-title.selected-for-batch .folder-select-checkbox:checked {
     background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* =========================== */
+/* == 【新功能】排序模式样式  == */
+/* =========================== */
+
+.folder-reorder-buttons { display: none; gap: 8px; }
+.move-folder-up-btn, .move-folder-down-btn { background: none; border: none; cursor: pointer; font-size: 16px; opacity: 0.7; transition: opacity 0.2s, transform 0.2s; padding: 2px; color: var(--main-text-color); }
+.move-folder-up-btn:hover, .move-folder-down-btn:hover { opacity: 1; transform: scale(1.2); }
+
+/* 当进入排序模式时... */
+#theme-manager-panel.reorder-mode .folder-buttons,
+#theme-manager-panel.reorder-mode .folder-select-checkbox,
+#theme-manager-panel.reorder-mode .theme-item-buttons {
+    display: none; /* 隐藏常规文件夹按钮和主题按钮 */
+}
+#theme-manager-panel.reorder-mode .folder-reorder-buttons {
+    display: flex; /* 显示排序按钮 */
+}
+#theme-manager-panel.reorder-mode .theme-list {
+    display: none !important; /* 强制隐藏主题列表，让界面更整洁 */
+}
+#theme-manager-panel.reorder-mode .theme-category-title {
+    cursor: grab; /* 更改鼠标指针为抓取手势，提供可移动的视觉提示 */
+}
+#theme-manager-panel.reorder-mode .theme-category-title:active {
+    cursor: grabbing; /* 拖动时的手势 */
 }
 
 
@@ -195,10 +224,3 @@
         flex-shrink: 0;
     }
 }
-
-
-
-
-
-
-
