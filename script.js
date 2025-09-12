@@ -7,12 +7,12 @@
         const saveAsButton = document.querySelector('#ui-preset-save-button');
 
         if (originalSelect && updateButton && saveAsButton && window.SillyTavern?.getContext && !document.querySelector('#theme-manager-panel')) {
-            console.log("Theme Manager (v24.0 True Hot Reload): 初始化...");
+            console.log("Theme Manager (v24.1 True Hot Reload FINAL): 初始化...");
             clearInterval(initInterval);
 
             try {
-                // 【核心修改】从SillyTavern上下文中获取 printCharactersDebounced 函数
-                const { getRequestHeaders, showLoader, hideLoader, printCharactersDebounced } = SillyTavern.getContext();
+                // 【核心修复】只获取SillyTavern明确提供的函数，特别是 reloadThemes
+                const { getRequestHeaders, showLoader, hideLoader, reloadThemes } = SillyTavern.getContext();
                 const FAVORITES_KEY = 'themeManager_favorites';
                 const COLLAPSE_KEY = 'themeManager_collapsed';
                 const THEME_BACKGROUND_BINDINGS_KEY = 'themeManager_backgroundBindings';
@@ -42,11 +42,6 @@
                         throw error;
                     }
                 }
-                async function getAllThemesFromAPI() { return (await apiRequest('settings/get', 'POST', {})).themes || []; }
-                async function deleteTheme(themeName) { await apiRequest('themes/delete', 'POST', { name: themeName }); }
-                async function saveTheme(themeObject) { await apiRequest('themes/save', 'POST', themeObject); }
-                
-                // 【核心重构】不再手动操作原生select，SillyTavern的刷新机制会为我们处理
                 
                 const originalContainer = originalSelect.parentElement;
                 if (!originalContainer) return;
@@ -103,6 +98,17 @@
                 let isBatchEditMode = false;
                 let selectedForBatch = new Set();
                 let selectedFoldersForBatch = new Set();
+                
+                function getTagsFromThemeName(themeName) {
+                    const tags = [];
+                    const tagRegex = /\[(.*?)\]/g;
+                    let match;
+                    while ((match = tagRegex.exec(themeName)) !== null) {
+                        if (match[1].trim()) tags.push(match[1].trim());
+                    }
+                    if (tags.length === 0) tags.push('未分类');
+                    return tags;
+                }
 
                 function setCollapsed(isCollapsed, animate = false) {
                     if (isCollapsed) {
@@ -134,10 +140,17 @@
                     }
                 }
                 
-                // 【核心重构】这个函数现在只负责渲染，不负责获取数据
-                function renderThemeUI(themes) {
+                function buildThemeUI() {
                     const scrollTopBefore = contentWrapper.scrollTop;
-                    contentWrapper.innerHTML = ''; // 清空
+                    contentWrapper.innerHTML = ''; 
+
+                    const themes = Array.from(originalSelect.options).map(option => {
+                        const themeName = option.value;
+                        if (!themeName) return null;
+                        const tags = getTagsFromThemeName(themeName);
+                        const displayName = themeName.replace(/\[.*?\]/g, '').trim() || themeName;
+                        return { value: themeName, display: displayName, tags: tags };
+                    }).filter(Boolean);
 
                     const allCategories = new Set(themes.flatMap(t => t.tags));
                     const sortedCategories = ['⭐ 收藏夹', ...Array.from(allCategories).sort((a, b) => a.localeCompare(b, 'zh-CN'))];
@@ -170,6 +183,13 @@
                             const item = document.createElement('li');
                             item.className = 'theme-item';
                             item.dataset.value = theme.value;
+                            item.addEventListener('click', () => {
+                                if (!isBatchEditMode) {
+                                    originalSelect.value = theme.value;
+                                    originalSelect.dispatchEvent(new Event('change'));
+                                }
+                            });
+
                             const isFavorited = favorites.includes(theme.value);
                             const starCharacter = isFavorited ? '★' : '☆';
                             const isBound = !!themeBackgroundBindings[theme.value];
@@ -194,31 +214,6 @@
                     updateActiveState();
                 }
 
-                // 【核心重构】所有UI刷新都通过这个统一的函数
-                async function refreshUI() {
-                    showLoader();
-                    const themeObjects = await getAllThemesFromAPI();
-                    const themes = themeObjects.map(theme => {
-                        const themeName = theme.name;
-                        const tags = getTagsFromThemeName(themeName);
-                        const displayName = themeName.replace(/\[.*?\]/g, '').trim() || themeName;
-                        return { value: themeName, display: displayName, tags };
-                    });
-                    renderThemeUI(themes);
-                    hideLoader();
-                }
-
-                function getTagsFromThemeName(themeName) {
-                    const tags = [];
-                    const tagRegex = /\[(.*?)\]/g;
-                    let match;
-                    while ((match = tagRegex.exec(themeName)) !== null) {
-                        if (match[1].trim()) tags.push(match[1].trim());
-                    }
-                    if (tags.length === 0) tags.push('未分类');
-                    return tags;
-                }
-
                 function updateActiveState() {
                     const currentValue = originalSelect.value;
                     managerPanel.querySelectorAll('.theme-item').forEach(item => {
@@ -240,10 +235,10 @@
                 });
 
                 randomBtn.addEventListener('click', async () => {
-                    const themes = await getAllThemesFromAPI();
+                    const themes = Array.from(originalSelect.options).map(opt => opt.value).filter(Boolean);
                     if (themes.length > 0) {
                         const randomIndex = Math.floor(Math.random() * themes.length);
-                        originalSelect.value = themes[randomIndex].name;
+                        originalSelect.value = themes[randomIndex];
                         originalSelect.dispatchEvent(new Event('change'));
                     }
                 });
@@ -279,19 +274,24 @@
                         } catch (err) {}
                     }
                     hideLoader();
-                    if(successCount > 0) printCharactersDebounced(true); // 【核心修复】
+                    if (successCount > 0) reloadThemes();
                     event.target.value = ''; 
                 });
 
                 batchImportBtn.addEventListener('click', () => fileInput.click());
-
-                // 【核心修复】所有批量操作在成功后都调用 SillyTavern 的刷新函数
+                
+                // 【核心修复】所有批量操作在成功后都调用 reloadThemes()
                 document.querySelector('#batch-add-tag-btn').addEventListener('click', async () => {
                     if (selectedForBatch.size === 0) { toastr.info('请先选择至少一个主题。'); return; }
                     const newTag = prompt('请输入要添加的新标签（文件夹名）：');
                     if (newTag && newTag.trim()) {
-                        await apiRequest('themes/batch-rename', 'POST', { themes: Array.from(selectedForBatch), pattern: `[${newTag.trim()}] {{name}}`});
-                        printCharactersDebounced(true);
+                        showLoader();
+                        for (const oldName of selectedForBatch) {
+                            await saveTheme({ name: `[${newTag.trim()}] ${oldName}` });
+                            await deleteTheme(oldName);
+                        }
+                        hideLoader();
+                        reloadThemes();
                     }
                 });
                 
@@ -302,8 +302,14 @@
                         const sanitizedTag = targetTag.trim().replace(/[\\/:*?"<>|]/g, '');
                         if (sanitizedTag !== targetTag.trim()) toastr.warning(`分类名包含非法字符，已自动过滤为: "${sanitizedTag}"`);
                         if (!sanitizedTag) { toastr.error('过滤后的分类名为空，操作已取消。'); return; }
-                        await apiRequest('themes/batch-rename', 'POST', { themes: Array.from(selectedForBatch), pattern: `[${sanitizedTag}] {{name}}`, strip_tags: true});
-                        printCharactersDebounced(true);
+                        showLoader();
+                        for (const oldName of selectedForBatch) {
+                            const newName = `[${sanitizedTag}] ${oldName.replace(/\[.*?\]/g, '').trim()}`;
+                            await saveTheme({ name: newName });
+                            await deleteTheme(oldName);
+                        }
+                        hideLoader();
+                        reloadThemes();
                     }
                 });
 
@@ -311,16 +317,26 @@
                     if (selectedForBatch.size === 0) { toastr.info('请先选择至少一个主题。'); return; }
                     const tagToRemove = prompt('请输入要移除的标签：');
                     if (tagToRemove && tagToRemove.trim()) {
-                         await apiRequest('themes/batch-rename', 'POST', { themes: Array.from(selectedForBatch), pattern: `{{name}}`, strip_tags: false, tag_to_remove: tagToRemove.trim()});
-                         printCharactersDebounced(true);
+                        showLoader();
+                        for (const oldName of selectedForBatch) {
+                            const newName = oldName.replace(`[${tagToRemove.trim()}]`, '').trim();
+                            await saveTheme({ name: newName });
+                            await deleteTheme(oldName);
+                        }
+                        hideLoader();
+                        reloadThemes();
                     }
                 });
 
                 document.querySelector('#batch-delete-btn').addEventListener('click', async () => {
                     if (selectedForBatch.size === 0) { toastr.info('请先选择至少一个主题。'); return; }
                     if (!confirm(`确定要删除选中的 ${selectedForBatch.size} 个主题吗？`)) return;
-                    await apiRequest('themes/batch-delete', 'POST', { themes: Array.from(selectedForBatch) });
-                    printCharactersDebounced(true);
+                    showLoader();
+                    for (const themeName of selectedForBatch) {
+                        await deleteTheme(themeName);
+                    }
+                    hideLoader();
+                    reloadThemes();
                 });
 
                 contentWrapper.addEventListener('click', async (event) => {
@@ -328,7 +344,7 @@
                     const button = target.closest('button');
                     const themeItem = target.closest('.theme-item');
                     const categoryTitle = target.closest('.theme-category-title');
-
+                    
                     if (categoryTitle) {
                         const list = categoryTitle.nextElementSibling;
                         if (list) list.style.display = (list.style.display === 'none') ? 'block' : 'none';
@@ -342,28 +358,33 @@
                         themeItem.classList.toggle('selected-for-batch');
                         if (selectedForBatch.has(themeName)) selectedForBatch.delete(themeName);
                         else selectedForBatch.add(themeName);
-                    } else {
-                        if (button && button.classList.contains('favorite-btn')) {
+                        return; // 批量模式下不执行后续操作
+                    }
+
+                    // 非批量模式下的按钮点击
+                    if (button) {
+                        event.stopPropagation(); // 阻止冒泡到li元素，避免触发主题切换
+                        if (button.classList.contains('favorite-btn')) {
                             if (favorites.includes(themeName)) {
                                 favorites = favorites.filter(f => f !== themeName);
                             } else {
                                 favorites.push(themeName);
                             }
                             localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
-                            await refreshUI();
+                            buildThemeUI(); // 收藏是纯前端状态，可以即时刷新
                         }
-                        else if (button && button.classList.contains('bind-bg-btn')) {
+                        else if (button.classList.contains('bind-bg-btn')) {
                             isBindingMode = true;
                             themeNameToBind = themeName;
                             document.querySelector('#logo_block .drawer-toggle').click();
                             toastr.info('请在背景面板中选择一张图片进行绑定。', '进入背景绑定模式');
                         }
-                        else if (button && button.classList.contains('unbind-bg-btn')) {
+                        else if (button.classList.contains('unbind-bg-btn')) {
                             delete themeBackgroundBindings[themeName];
                             localStorage.setItem(THEME_BACKGROUND_BINDINGS_KEY, JSON.stringify(themeBackgroundBindings));
-                            await refreshUI();
+                            buildThemeUI(); // 解绑也是纯前端状态
                         }
-                        else if (button && button.classList.contains('rename-btn')) {
+                        else if (button.classList.contains('rename-btn')) {
                             const oldName = themeName;
                             const newName = prompt(`请输入新名称：`, oldName);
                             if (newName && newName !== oldName) {
@@ -380,21 +401,18 @@
                                     }
                                 }
                                 hideLoader();
-                                printCharactersDebounced(true); // 【核心修复】
+                                reloadThemes(); // 【核心修复】
                             }
                         }
-                        else if (button && button.classList.contains('delete-btn')) {
+                        else if (button.classList.contains('delete-btn')) {
                             if (confirm(`确定要删除主题 "${themeItem.querySelector('.theme-item-name').textContent}" 吗？`)) {
                                 showLoader();
                                 await deleteTheme(themeName);
                                 delete themeBackgroundBindings[themeName];
                                 localStorage.setItem(THEME_BACKGROUND_BINDINGS_KEY, JSON.stringify(themeBackgroundBindings));
                                 hideLoader();
-                                printCharactersDebounced(true); // 【核心修复】
+                                reloadThemes(); // 【核心修复】
                             }
-                        } else {
-                            originalSelect.value = themeName;
-                            originalSelect.dispatchEvent(new Event('change'));
                         }
                     }
                 });
@@ -409,10 +427,12 @@
                     }
                 });
                 
-                // 【核心修复】监听 SillyTavern 的事件，当角色列表刷新时，我们的UI也刷新
-                window.eventSource.on('characters-loaded', refreshUI);
-                window.eventSource.on('themes-loaded', refreshUI);
-
+                // 【核心修复】监听 SillyTavern 的原生select，当它被改变时，我们就刷新自己的UI
+                const observer = new MutationObserver(() => {
+                    console.log('Theme Manager: Detected change in original select, rebuilding UI.');
+                    buildThemeUI();
+                });
+                observer.observe(originalSelect, { childList: true });
                 
                 const bgMenuContent = document.querySelector('#bg_menu_content');
                 if (bgMenuContent) {
@@ -429,11 +449,11 @@
                         isBindingMode = false;
                         themeNameToBind = null;
                         document.querySelector('#logo_block .drawer-toggle').click();
-                        await refreshUI();
+                        await buildThemeUI();
                     }, true);
                 }
 
-                refreshUI().then(() => {
+                buildThemeUI().then(() => {
                     const isInitiallyCollapsed = localStorage.getItem(COLLAPSE_KEY) !== 'false';
                     setCollapsed(isInitiallyCollapsed, false);
                 });
