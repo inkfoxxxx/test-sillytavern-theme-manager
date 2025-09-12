@@ -11,14 +11,14 @@
             clearInterval(initInterval);
 
             try {
-                // 【核心修改】移除了 reloadThemes，我们不再需要它
                 const { getRequestHeaders, showLoader, hideLoader } = SillyTavern.getContext();
                 const FAVORITES_KEY = 'themeManager_favorites';
                 const COLLAPSE_KEY = 'themeManager_collapsed';
+                const CATEGORY_ORDER_KEY = 'themeManager_categoryOrder'; // 【新功能】用于存储文件夹顺序的键
 
                 let openCategoriesAfterRefresh = new Set();
                 let allParsedThemes = [];
-                let refreshNeeded = false; // 【核心修改】用于追踪是否需要刷新的状态旗帜
+                let refreshNeeded = false; 
 
                 async function apiRequest(endpoint, method = 'POST', body = {}) {
                     try {
@@ -88,7 +88,6 @@
 
                 const managerPanel = document.createElement('div');
                 managerPanel.id = 'theme-manager-panel';
-                // 【核心修改】在HTML中添加了提示区域
                 managerPanel.innerHTML = `
                     <div id="theme-manager-header">
                         <h4>🎨 主题美化管理</h4>
@@ -130,13 +129,11 @@
                 const searchBox = managerPanel.querySelector('#theme-search-box');
                 const randomBtn = managerPanel.querySelector('#random-theme-btn');
                 const batchImportBtn = managerPanel.querySelector('#batch-import-btn');
-
-                // 【核心修改】获取提示元素并为其按钮绑定刷新事件
+                
                 const refreshNotice = managerPanel.querySelector('#theme-manager-refresh-notice');
                 const refreshBtn = managerPanel.querySelector('#theme-manager-refresh-page-btn');
                 refreshBtn.addEventListener('click', () => location.reload());
-                
-                // 【核心修改】用于显示刷新提示的函数
+
                 function showRefreshNotification() {
                     if (!refreshNeeded) {
                         refreshNeeded = true;
@@ -203,7 +200,20 @@
                         }).filter(Boolean);
 
                         const allCategories = new Set(allParsedThemes.flatMap(t => t.tags));
-                        const sortedCategories = ['⭐ 收藏夹', ...Array.from(allCategories).sort((a, b) => a.localeCompare(b, 'zh-CN'))];
+                        
+                        // 【新功能】文件夹排序逻辑
+                        let savedOrder = JSON.parse(localStorage.getItem(CATEGORY_ORDER_KEY)) || [];
+                        const savedOrderSet = new Set(savedOrder);
+                        const newCategories = Array.from(allCategories).filter(cat => !savedOrderSet.has(cat));
+                        const fullOrder = [...savedOrder, ...newCategories.sort((a, b) => a.localeCompare(b, 'zh-CN'))];
+                        localStorage.setItem(CATEGORY_ORDER_KEY, JSON.stringify(fullOrder));
+                        
+                        const categoryOrderMap = new Map(fullOrder.map((cat, index) => [cat, index]));
+                        const sortedCategories = ['⭐ 收藏夹', ...Array.from(allCategories).sort((a, b) => {
+                            const indexA = categoryOrderMap.get(a);
+                            const indexB = categoryOrderMap.get(b);
+                            return indexA - indexB;
+                        })];
 
                         sortedCategories.forEach(category => {
                             const themesInCategory = (category === '⭐ 收藏夹') ? allParsedThemes.filter(t => favorites.includes(t.value)) : allParsedThemes.filter(t => t.tags.includes(category));
@@ -215,13 +225,19 @@
                             const title = document.createElement('div');
                             title.className = 'theme-category-title';
                             
+                            // 【新功能】为文件夹标题添加拖拽属性
+                            if (category !== '未分类' && category !== '⭐ 收藏夹') {
+                                title.draggable = true;
+                            }
+
                             let titleHTML = '';
                             if (category !== '未分类' && category !== '⭐ 收藏夹') {
                                 titleHTML += `<input type="checkbox" class="folder-select-checkbox" title="选择文件夹进行批量操作">`;
                             }
                             titleHTML += `<span>${category}</span>`;
                             if (category !== '未分类' && category !== '⭐ 收藏夹') {
-                                titleHTML += `<button class="dissolve-folder-btn" title="解散此文件夹">解散</button>`;
+                                // 【新功能】添加重命名和解散按钮容器
+                                titleHTML += `<div class="folder-buttons"><button class="rename-folder-btn" title="重命名文件夹">✏️</button><button class="dissolve-folder-btn" title="解散此文件夹">解散</button></div>`;
                             }
                             title.innerHTML = titleHTML;
 
@@ -318,10 +334,9 @@
                     if (skippedCount > 0) summary += `，跳过 ${skippedCount} 个`;
                     summary += '。';
                     toastr.success(summary);
-                    
-                    // 【核心修改】显示刷新提示并更新UI
+
                     showRefreshNotification();
-                    await buildThemeUI();
+                    await buildThemeUI(); 
                 }
 
                 async function performBatchDelete() {
@@ -345,7 +360,6 @@
                     hideLoader();
                     toastr.success('批量删除完成！');
                     
-                    // 【核心修改】显示刷新提示并更新UI
                     showRefreshNotification();
                     await buildThemeUI();
                 }
@@ -390,7 +404,6 @@
                     selectedFoldersForBatch.clear();
                     toastr.success(`批量解散完成！成功处理 ${successCount} 个主题，失败 ${errorCount} 个。`);
                     
-                    // 【核心修改】显示刷新提示并更新UI
                     showRefreshNotification();
                     buildThemeUI();
                 }
@@ -461,7 +474,6 @@
                     hideLoader();
                     toastr.success(`批量导入完成！成功 ${successCount} 个，失败 ${errorCount} 个。正在刷新页面以应用更改...`);
                     
-                    // 【核心修改】这里保留页面刷新，因为导入新文件最稳妥的方式还是全页面重载
                     setTimeout(() => {
                         location.reload();
                     }, 1500);
@@ -517,7 +529,7 @@
                 document.querySelector('#batch-delete-btn').addEventListener('click', performBatchDelete);
                 document.querySelector('#batch-dissolve-btn').addEventListener('click', performBatchDissolve);
 
-                                contentWrapper.addEventListener('click', async (event) => {
+                contentWrapper.addEventListener('click', async (event) => {
                     const target = event.target;
                     const button = target.closest('button');
                     const themeItem = target.closest('.theme-item');
@@ -541,6 +553,34 @@
                     }
 
                     if (categoryTitle) {
+                        // 【新功能】处理文件夹重命名
+                        if (button && button.classList.contains('rename-folder-btn')) {
+                            event.stopPropagation();
+                            const categoryDiv = categoryTitle.closest('.theme-category');
+                            const oldFolderName = categoryDiv.dataset.categoryName;
+                            const newFolderName = prompt('请输入新的文件夹名称:', oldFolderName);
+
+                            if (newFolderName && newFolderName.trim() && newFolderName !== oldFolderName) {
+                                showLoader();
+                                const themesToRename = allParsedThemes.filter(t => t.tags.includes(oldFolderName));
+                                for (const theme of themesToRename) {
+                                    const oldName = theme.value;
+                                    const newName = oldName.replace(`[${oldFolderName}]`, `[${newFolderName.trim()}]`);
+                                    const themeObject = allThemeObjects.find(t => t.name === oldName);
+                                    if (themeObject) {
+                                        await saveTheme({ ...themeObject, name: newName });
+                                        await deleteTheme(oldName);
+                                        manualUpdateOriginalSelect('rename', oldName, newName);
+                                    }
+                                }
+                                hideLoader();
+                                toastr.success(`文件夹 "${oldFolderName}" 已重命名为 "${newFolderName.trim()}"`);
+                                showRefreshNotification();
+                                await buildThemeUI();
+                            }
+                            return;
+                        }
+
                         if (button && button.classList.contains('dissolve-folder-btn')) {
                             event.stopPropagation();
                             const categoryName = categoryTitle.closest('.theme-category').dataset.categoryName;
@@ -561,8 +601,6 @@
                             }
                             hideLoader();
                             toastr.success(`文件夹 "${categoryName}" 已解散！`);
-                            
-                            // 【核心修改】显示刷新提示
                             showRefreshNotification();
                             await buildThemeUI();
                         } else {
@@ -611,8 +649,6 @@
                                 await saveTheme({ ...themeObject, name: newName });
                                 await deleteTheme(oldName);
                                 manualUpdateOriginalSelect('rename', oldName, newName);
-
-                                // 【核心修改】显示刷新提示
                                 showRefreshNotification();
                                 await buildThemeUI();
                             }
@@ -628,8 +664,6 @@
                                     originalSelect.value = azureOption ? 'Azure' : (originalSelect.options[0]?.value || '');
                                     originalSelect.dispatchEvent(new Event('change'));
                                 }
-
-                                // 【核心修改】显示刷新提示
                                 showRefreshNotification();
                                 await buildThemeUI();
                             }
@@ -640,6 +674,46 @@
                     }
                 });
                 originalSelect.addEventListener('change', updateActiveState);
+                
+                // 【新功能】文件夹拖拽排序的事件监听
+                let draggedCategory = null;
+
+                contentWrapper.addEventListener('dragstart', (event) => {
+                    if (isBatchEditMode) return;
+                    const target = event.target.closest('.theme-category-title');
+                    if (target && target.draggable) {
+                        draggedCategory = target.parentElement;
+                        event.dataTransfer.effectAllowed = 'move';
+                        // 添加视觉效果
+                        setTimeout(() => draggedCategory.classList.add('dragging'), 0);
+                    }
+                });
+
+                contentWrapper.addEventListener('dragover', (event) => {
+                    event.preventDefault();
+                    if (isBatchEditMode || !draggedCategory) return;
+                    const targetCategory = event.target.closest('.theme-category');
+                    if (targetCategory && targetCategory !== draggedCategory) {
+                        // 根据鼠标位置决定是在目标上方还是下方插入
+                        const rect = targetCategory.getBoundingClientRect();
+                        const nextElement = (event.clientY - rect.top) > (rect.height / 2) ? targetCategory.nextSibling : targetCategory;
+                        contentWrapper.insertBefore(draggedCategory, nextElement);
+                    }
+                });
+
+                contentWrapper.addEventListener('dragend', (event) => {
+                    if (draggedCategory) {
+                        draggedCategory.classList.remove('dragging');
+                        draggedCategory = null;
+                        
+                        // 保存新的顺序
+                        const newOrder = Array.from(contentWrapper.querySelectorAll('.theme-category'))
+                            .map(div => div.dataset.categoryName)
+                            .filter(name => name !== '⭐ 收藏夹' && name !== '未分类'); // 不保存特殊分类
+                        localStorage.setItem(CATEGORY_ORDER_KEY, JSON.stringify(newOrder));
+                        toastr.info('文件夹顺序已保存。');
+                    }
+                });
 
                 const observer = new MutationObserver((mutations) => {
                     for (let mutation of mutations) {
@@ -648,7 +722,6 @@
                             if (newNode.tagName === 'OPTION' && newNode.value) {
                                 toastr.success(`已另存为新主题: "${newNode.value}"`);
                                 getTagsFromThemeName(newNode.value).forEach(tag => openCategoriesAfterRefresh.add(tag));
-                                // 【核心修改】“另存为”操作也需要提示刷新
                                 showRefreshNotification();
                                 break;
                             }
