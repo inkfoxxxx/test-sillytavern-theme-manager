@@ -170,3 +170,24 @@
         flex-shrink: 0;
     }
 }
+
+/* ========================================= */
+/* == 【新增】背景绑定功能样式 == */
+/* ========================================= */
+
+.theme-item-buttons .bind-bg-btn,
+.theme-item-buttons .unbind-bg-btn {
+    font-family: 'Font Awesome 6 Free'; /* 确保能正确显示图标 */
+    font-weight: 900; /* 使用 solid 样式的图标 */
+}
+
+/* 绑定按钮的默认状态 */
+.theme-item-buttons .bind-bg-btn {
+    color: var(--main-text-color);
+}
+
+/* 已绑定状态下的高亮 */
+.theme-item-buttons .bind-bg-btn.bound {
+    color: var(--primary-color, #007bff); /* 使用主题的主色调 */
+    text-shadow: 0 0 5px var(--primary-color, #007bff);
+}
