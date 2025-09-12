@@ -19,7 +19,7 @@
                 let openCategoriesAfterRefresh = new Set();
                 let allParsedThemes = [];
                 let refreshNeeded = false;
-                let isReorderMode = false; // 【新功能】排序模式的状态旗帜
+                let isReorderMode = false;
 
                 async function apiRequest(endpoint, method = 'POST', body = {}) {
                     try {
@@ -131,7 +131,7 @@
                 const searchBox = managerPanel.querySelector('#theme-search-box');
                 const randomBtn = managerPanel.querySelector('#random-theme-btn');
                 const batchImportBtn = managerPanel.querySelector('#batch-import-btn');
-                const reorderModeBtn = managerPanel.querySelector('#reorder-mode-btn'); // 【新功能】获取排序模式按钮
+                const reorderModeBtn = managerPanel.querySelector('#reorder-mode-btn');
                 
                 const refreshNotice = managerPanel.querySelector('#theme-manager-refresh-notice');
                 const refreshBtn = managerPanel.querySelector('#theme-manager-refresh-page-btn');
@@ -157,7 +157,6 @@
                 let selectedForBatch = new Set();
                 let selectedFoldersForBatch = new Set();
 
-                // 【新功能】保存文件夹顺序到localStorage
                 function saveCategoryOrder() {
                     const newOrder = Array.from(contentWrapper.querySelectorAll('.theme-category'))
                         .map(div => div.dataset.categoryName)
@@ -221,16 +220,22 @@
                         localStorage.setItem(CATEGORY_ORDER_KEY, JSON.stringify(currentOrder));
                         
                         const categoryOrderMap = new Map(currentOrder.map((cat, index) => [cat, index]));
+                        
+                        // 【核心修复】修正分类列表的构建逻辑
                         const specialCategories = ['⭐ 收藏夹', '未分类'];
                         const sortedNormalCategories = Array.from(allCategories)
                             .filter(cat => !specialCategories.includes(cat))
                             .sort((a, b) => (categoryOrderMap.get(a) ?? Infinity) - (categoryOrderMap.get(b) ?? Infinity));
                         
-                        const sortedCategories = ['⭐ 收藏夹', ...sortedNormalCategories, '未分类'].filter(cat => allCategories.has(cat));
+                        const sortedCategories = ['⭐ 收藏夹', ...sortedNormalCategories];
+                        if (allCategories.has('未分类')) {
+                            sortedCategories.push('未分类');
+                        }
 
 
                         sortedCategories.forEach(category => {
                             const themesInCategory = (category === '⭐ 收藏夹') ? allParsedThemes.filter(t => favorites.includes(t.value)) : allParsedThemes.filter(t => t.tags.includes(category));
+                            // 【核心修复】调整判断逻辑，确保收藏夹和未分类即使为空也总是显示
                             if (themesInCategory.length === 0 && category !== '未分类' && category !== '⭐ 收藏夹') return;
 
                             const categoryDiv = document.createElement('div');
@@ -238,6 +243,10 @@
                             categoryDiv.dataset.categoryName = category;
                             const title = document.createElement('div');
                             title.className = 'theme-category-title';
+                            
+                            if (category !== '未分类' && category !== '⭐ 收藏夹') {
+                                title.draggable = true;
+                            }
 
                             let titleHTML = '';
                             if (category !== '未分类' && category !== '⭐ 收藏夹') {
@@ -447,14 +456,12 @@
                     }
                 });
                 
-                // 【新功能】排序模式按钮逻辑
                 reorderModeBtn.addEventListener('click', () => {
                     isReorderMode = !isReorderMode;
                     managerPanel.classList.toggle('reorder-mode', isReorderMode);
                     reorderModeBtn.classList.toggle('selected', isReorderMode);
                     reorderModeBtn.textContent = isReorderMode ? '完成排序' : '🔄 调整顺序';
 
-                    // 确保不会与批量编辑模式冲突
                     if (isReorderMode && isBatchEditMode) {
                         batchEditBtn.click();
                     }
@@ -467,7 +474,6 @@
                     batchEditBtn.classList.toggle('selected', isBatchEditMode);
                     batchEditBtn.textContent = isBatchEditMode ? '退出批量编辑' : '🔧 批量编辑';
                     
-                    // 确保不会与排序模式冲突
                     if (isBatchEditMode && isReorderMode) {
                         reorderModeBtn.click();
                     }
@@ -589,7 +595,6 @@
                     }
 
                     if (categoryTitle) {
-                        // 【新功能】处理文件夹重命名
                         if (button && button.classList.contains('rename-folder-btn')) {
                             event.stopPropagation();
                             const categoryDiv = categoryTitle.closest('.theme-category');
@@ -617,12 +622,11 @@
                             return;
                         }
                         
-                        // 【新功能】处理文件夹排序按钮点击
                         if (button && button.classList.contains('move-folder-up-btn')) {
                             event.stopPropagation();
                             const currentCategory = categoryTitle.parentElement;
                             const prevCategory = currentCategory.previousElementSibling;
-                            if (prevCategory && !['⭐ 收藏夹', '未分类'].includes(prevCategory.dataset.categoryName)) {
+                            if (prevCategory && prevCategory.dataset.categoryName !== '⭐ 收藏夹') {
                                 contentWrapper.insertBefore(currentCategory, prevCategory);
                                 saveCategoryOrder();
                             }
@@ -633,7 +637,7 @@
                             event.stopPropagation();
                             const currentCategory = categoryTitle.parentElement;
                             const nextCategory = currentCategory.nextElementSibling;
-                            if (nextCategory && !['⭐ 收藏夹', '未分类'].includes(nextCategory.dataset.categoryName)) {
+                            if (nextCategory && nextCategory.dataset.categoryName !== '未分类') {
                                 contentWrapper.insertBefore(nextCategory, currentCategory);
                                 saveCategoryOrder();
                             }
@@ -663,7 +667,7 @@
                             showRefreshNotification();
                             await buildThemeUI();
                         } else {
-                            if (isReorderMode) return; // 排序模式下禁止展开/折叠
+                            if (isReorderMode) return;
                             const list = categoryTitle.nextElementSibling;
                             if (list) list.style.display = (list.style.display === 'none') ? 'block' : 'none';
                         }
