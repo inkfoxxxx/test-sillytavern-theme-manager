@@ -15,6 +15,7 @@
                 const FAVORITES_KEY = 'themeManager_favorites';
                 const COLLAPSE_KEY = 'themeManager_collapsed';
                 const CATEGORY_ORDER_KEY = 'themeManager_categoryOrder';
+                const FOLDER_STATE_KEY = 'themeManager_folderState'; // 【新功能】用于记住文件夹展开/折叠状态
 
                 let openCategoriesAfterRefresh = new Set();
                 let allParsedThemes = [];
@@ -131,7 +132,7 @@
                 const searchBox = managerPanel.querySelector('#theme-search-box');
                 const randomBtn = managerPanel.querySelector('#random-theme-btn');
                 const batchImportBtn = managerPanel.querySelector('#batch-import-btn');
-                const reorderModeBtn = managerPanel.querySelector('#reorder-mode-btn');
+                const reorderModeBtn = managerPanel.querySelector('#reorder-mode-btn'); 
                 
                 const refreshNotice = managerPanel.querySelector('#theme-manager-refresh-notice');
                 const refreshBtn = managerPanel.querySelector('#theme-manager-refresh-page-btn');
@@ -152,6 +153,7 @@
                 document.body.appendChild(fileInput);
 
                 let favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY)) || [];
+                let folderStates = JSON.parse(localStorage.getItem(FOLDER_STATE_KEY)) || {};
                 let allThemeObjects = [];
                 let isBatchEditMode = false;
                 let selectedForBatch = new Set();
@@ -268,10 +270,12 @@
                             list.className = 'theme-list';
                             
                             // 【核心修复】恢复并优化逻辑
-                            if (openCategoriesAfterRefresh.size > 0 && !openCategoriesAfterRefresh.has(category)) {
-                                list.style.display = 'none';
+                            if (openCategoriesAfterRefresh.size > 0) {
+                                // 场景1: 刚刚有操作发生，使用“记事本”
+                                list.style.display = openCategoriesAfterRefresh.has(category) ? 'block' : 'none';
                             } else {
-                                list.style.display = 'block';
+                                // 场景2: 正常加载，使用“记忆”或默认展开
+                                list.style.display = folderStates[category] === false ? 'none' : 'block';
                             }
 
                             themesInCategory.forEach(theme => {
@@ -323,6 +327,7 @@
 
                     getCategoriesForThemes(selectedForBatch).forEach(cat => openCategoriesAfterRefresh.add(cat));
                     selectedForBatch.forEach(name => getTagsFromThemeName(renameLogic(name)).forEach(tag => openCategoriesAfterRefresh.add(tag)));
+
 
                     for (const oldName of selectedForBatch) {
                         try {
@@ -673,8 +678,13 @@
                         } else {
                             if (isReorderMode) return;
                             const list = categoryTitle.nextElementSibling;
+                            const categoryName = categoryTitle.parentElement.dataset.categoryName;
                             if (list) {
-                                list.style.display = (list.style.display === 'none') ? 'block' : 'none';
+                                const isVisible = list.style.display !== 'none';
+                                list.style.display = isVisible ? 'none' : 'block';
+                                // 【核心修改】保存用户的手动折叠/展开状态
+                                folderStates[categoryName] = !isVisible;
+                                localStorage.setItem(FOLDER_STATE_KEY, JSON.stringify(folderStates));
                             }
                         }
                         return;
