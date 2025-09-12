@@ -231,7 +231,6 @@
                             sortedCategories.push('未分类');
                         }
 
-
                         sortedCategories.forEach(category => {
                             const themesInCategory = (category === '⭐ 收藏夹') ? allParsedThemes.filter(t => favorites.includes(t.value)) : allParsedThemes.filter(t => t.tags.includes(category));
                             if (themesInCategory.length === 0 && category !== '未分类' && category !== '⭐ 收藏夹') return;
@@ -268,11 +267,13 @@
                             const list = document.createElement('ul');
                             list.className = 'theme-list';
                             
-                            // 【核心修改】这里的逻辑是关键
-                            if (openCategoriesAfterRefresh.size > 0 && !openCategoriesAfterRefresh.has(category)) {
-                                list.style.display = 'none';
+                            // 【核心修复】修正文件夹展开/折叠的逻辑
+                            if (openCategoriesAfterRefresh.size > 0) {
+                                // 如果是操作后刷新，只展开受影响的文件夹
+                                list.style.display = openCategoriesAfterRefresh.has(category) ? 'block' : 'none';
                             } else {
-                                list.style.display = 'block';
+                                // 否则，默认只展开收藏夹
+                                list.style.display = category === '⭐ 收藏夹' ? 'block' : 'none';
                             }
 
                             themesInCategory.forEach(theme => {
@@ -298,7 +299,6 @@
                         
                         contentWrapper.scrollTop = scrollTop;
                         updateActiveState();
-                        // 【核心修改】UI刷新后，清空状态，以便下一次操作
                         openCategoriesAfterRefresh.clear();
 
                     } catch (err) {
@@ -322,6 +322,11 @@
                     let errorCount = 0;
                     let skippedCount = 0;
                     const currentThemes = await getAllThemesFromAPI();
+
+                    // 【核心修改】在批量操作前记录所有受影响的文件夹
+                    getCategoriesForThemes(selectedForBatch).forEach(cat => openCategoriesAfterRefresh.add(cat));
+                    selectedForBatch.forEach(name => getTagsFromThemeName(renameLogic(name)).forEach(tag => openCategoriesAfterRefresh.add(tag)));
+
 
                     for (const oldName of selectedForBatch) {
                         try {
@@ -369,7 +374,6 @@
                     if (selectedForBatch.size === 0) { toastr.info('请先选择至少一个主题。'); return; }
                     if (!confirm(`确定要删除选中的 ${selectedForBatch.size} 个主题吗？`)) return;
                     
-                    // 【核心修改】记录所有被删除文件所在的文件夹
                     getCategoriesForThemes(selectedForBatch).forEach(cat => openCategoriesAfterRefresh.add(cat));
 
                     showLoader();
@@ -400,7 +404,6 @@
                     let errorCount = 0;
                     const themesToProcess = new Map();
 
-                    // 【核心修改】记录所有被解散的文件夹和目标“未分类”文件夹
                     selectedFoldersForBatch.forEach(folderName => {
                         openCategoriesAfterRefresh.add(folderName);
                         allParsedThemes.forEach(theme => {
@@ -533,7 +536,6 @@
                     if (selectedForBatch.size === 0) { toastr.info('请先选择至少一个主题。'); return; }
                     const newTag = prompt('请输入要添加的新标签（文件夹名）：');
                     if (newTag && newTag.trim()) {
-                        // 【核心修改】记录所有源文件夹和新的目标文件夹
                         getCategoriesForThemes(selectedForBatch).forEach(cat => openCategoriesAfterRefresh.add(cat));
                         openCategoriesAfterRefresh.add(newTag.trim());
                         await performBatchRename(oldName => `[${newTag.trim()}] ${oldName}`);
@@ -554,7 +556,6 @@
                             return;
                         }
                         
-                        // 【核心修改】记录所有源文件夹和新的目标文件夹
                         getCategoriesForThemes(selectedForBatch).forEach(cat => openCategoriesAfterRefresh.add(cat));
                         openCategoriesAfterRefresh.add(sanitizedTag);
                         
@@ -566,7 +567,6 @@
                     if (selectedForBatch.size === 0) { toastr.info('请先选择至少一个主题。'); return; }
                     const tagToRemove = prompt('请输入要移除的标签（等同于将所选美化从以该标签命名的文件夹移出）：');
                     if (tagToRemove && tagToRemove.trim()) {
-                        // 【核心修改】记录所有源文件夹、被移除的文件夹和“未分类”
                         getCategoriesForThemes(selectedForBatch).forEach(cat => openCategoriesAfterRefresh.add(cat));
                         openCategoriesAfterRefresh.add(tagToRemove.trim());
                         openCategoriesAfterRefresh.add('未分类');
@@ -607,7 +607,6 @@
                             const newFolderName = prompt('请输入新的文件夹名称:', oldFolderName);
 
                             if (newFolderName && newFolderName.trim() && newFolderName !== oldFolderName) {
-                                // 【核心修改】记录旧文件夹名和新文件夹名
                                 openCategoriesAfterRefresh.add(oldFolderName);
                                 openCategoriesAfterRefresh.add(newFolderName.trim());
 
@@ -658,7 +657,6 @@
                             const categoryName = categoryTitle.closest('.theme-category').dataset.categoryName;
                             if (!confirm(`确定要解散文件夹 "${categoryName}" 吗？`)) return;
                             
-                            // 【核心修改】记录被解散的文件夹和“未分类”
                             openCategoriesAfterRefresh.add(categoryName);
                             openCategoriesAfterRefresh.add('未分类');
 
@@ -699,7 +697,6 @@
                         const categoryName = themeItem.closest('.theme-category').dataset.categoryName;
 
                         if (button && button.classList.contains('favorite-btn')) {
-                            // 【核心修改】记录源文件夹和收藏夹
                             openCategoriesAfterRefresh.add(categoryName);
                             openCategoriesAfterRefresh.add('⭐ 收藏夹');
                             if (favorites.includes(themeName)) {
@@ -716,7 +713,6 @@
                             const oldName = themeName;
                             const newName = prompt(`请输入新名称：`, oldName);
                             if (newName && newName !== oldName) {
-                                // 【核心修改】记录旧文件夹和所有新文件夹
                                 openCategoriesAfterRefresh.add(categoryName);
                                 getTagsFromThemeName(newName).forEach(tag => openCategoriesAfterRefresh.add(tag));
 
@@ -731,7 +727,6 @@
                         }
                         else if (button && button.classList.contains('delete-btn')) {
                             if (confirm(`确定要删除主题 "${themeItem.querySelector('.theme-item-name').textContent}" 吗？`)) {
-                                // 【核心修改】记录被删除文件所在的文件夹
                                 openCategoriesAfterRefresh.add(categoryName);
                                 const isCurrentlyActive = originalSelect.value === themeName;
                                 await deleteTheme(themeName);
@@ -758,7 +753,6 @@
                             const newNode = mutation.addedNodes[0];
                             if (newNode.tagName === 'OPTION' && newNode.value) {
                                 toastr.success(`已另存为新主题: "${newNode.value}"`);
-                                // 【核心修改】记录新主题所在的文件夹
                                 getTagsFromThemeName(newNode.value).forEach(tag => openCategoriesAfterRefresh.add(tag));
                                 showRefreshNotification();
                                 break;
