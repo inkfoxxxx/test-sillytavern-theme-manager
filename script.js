@@ -55,7 +55,7 @@
                     
                     const headers = getRequestHeaders();
                     delete headers['Content-Type']; // Let browser set the multipart/form-data boundary
-
+                try {
                     const response = await fetch('/api/backgrounds/delete', {
                         method: 'POST',
                         headers: headers,
@@ -66,7 +66,12 @@
                         const responseText = await response.text();
                         throw new Error(responseText || `HTTP error! status: ${response.status}`);
                     }
+                } catch (error) {
+                    console.error(`删除背景 "${bgFile}" 时出错:`, error);
+                    // 将错误再次抛出，以便外层可以捕获并显示给用户
+                    throw error;
                 }
+            }
                 // ### FINAL FIX END ###
 
                 async function uploadBackground(formData) {
