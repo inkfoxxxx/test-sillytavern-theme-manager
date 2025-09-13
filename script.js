@@ -48,22 +48,21 @@
                 async function deleteTheme(themeName) { await apiRequest('themes/delete', 'POST', { name: themeName }); }
                 async function saveTheme(themeObject) { await apiRequest('themes/save', 'POST', themeObject); }
 
-                // ### 最终的正确修复：使用 JSON 格式发送删除请求 ###
+                // ### 最终解决方案 v3：使用 URL 查询参数 ###
                 async function deleteBackground(bgFile) {
-                    // 直接构建一个包含文件名的简单JavaScript对象
-                    const body = {
-                        name: bgFile
-                    };
+                    // 1. 将文件名作为查询参数附加到 URL 上
+                    //    使用 encodeURIComponent 来确保特殊字符（如空格或中文）能被正确编码
+                    const url = `/api/backgrounds/delete?name=${encodeURIComponent(bgFile)}`;
 
-                    // 获取通用请求头，这次我们保留 'Content-Type': 'application/json'
+                    // 2. 获取通用请求头。注意这次请求体为空。
                     const headers = getRequestHeaders();
 
                     try {
-                        const response = await fetch('/api/backgrounds/delete', {
+                        const response = await fetch(url, { // 使用新的带参数的URL
                             method: 'POST',
                             headers: headers,
-                            // 将JavaScript对象转换为JSON字符串作为请求体
-                            body: JSON.stringify(body)
+                            // 3. body 必须为空，因为数据已经在URL里了
+                            body: null
                         });
 
                         if (!response.ok) {
@@ -72,11 +71,10 @@
                         }
                     } catch (error) {
                         console.error(`删除背景 "${bgFile}" 时出错:`, error);
-                        // 将错误再次抛出，以便外层可以捕获并显示给用户
                         throw error;
                     }
                 }
-                // ### 修复结束 ###
+                // ### 解决方案结束 ###
 
                 async function uploadBackground(formData) {
                     const headers = getRequestHeaders();
