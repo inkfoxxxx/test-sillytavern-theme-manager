@@ -52,8 +52,6 @@
                 async function deleteTheme(themeName) { await apiRequest('themes/delete', 'POST', { name: themeName }); }
                 async function saveTheme(themeObject) { await apiRequest('themes/save', 'POST', themeObject); }
                 async function deleteBackground(bgFile) { await apiRequest('backgrounds/delete', 'POST', { name: bgFile }); }
-
-                // ### FIX START: Improved uploadBackground to handle server errors ###
                 async function uploadBackground(formData) {
                     const headers = getRequestHeaders();
                     delete headers['Content-Type'];
@@ -63,7 +61,6 @@
                         throw new Error(responseText || `HTTP error! status: ${response.status}`);
                     }
                 }
-                // ### FIX END ###
 
                 function manualUpdateOriginalSelect(action, oldName, newName) {
                     const originalSelect = document.querySelector('#themes');
@@ -233,9 +230,9 @@
                 
                     const bgListContainer = document.createElement('div');
                     bgListContainer.className = 'bg_list';
-
-                    // ### FIX START: Define protected backgrounds ###
-                    const protectedBgs = ['_transparent.png', '_black.png', '_white.png'];
+                
+                    // ### FIX START: Corrected protected background names ###
+                    const protectedBgs = ['_transparent', '_black', '_white'];
                     // ### FIX END ###
                 
                     const systemBgs = document.querySelectorAll('#bg_menu_content .bg_example');
@@ -250,9 +247,7 @@
                 
                     allBgs.forEach(bg => {
                         const bgFile = bg.getAttribute('bgfile');
-                        // ### FIX START: Exclude add button and protected backgrounds ###
                         if (bg.querySelector('.add_bg_but') || bg.classList.contains('add_bg_but') || protectedBgs.includes(bgFile)) return;
-                        // ### FIX END ###
                 
                         const clone = bg.cloneNode(true);
                         const checkbox = document.createElement('input');
@@ -615,11 +610,10 @@
                     manageBgsBtn.textContent = isManageBgMode ? '完成管理' : '🖼️ 管理背景';
                 
                     // ### FIX START: Improved visibility logic for action bars ###
-                    managerPanel.querySelector('.theme-manager-actions[data-mode="theme"]').style.display = isManageBgMode ? 'none' : 'flex';
-                    managerPanel.querySelector('.theme-manager-actions[data-mode="shared"]').style.display = 'flex'; // This bar is always visible in some form
+                    managerPanel.querySelector('[data-mode="theme"]').style.display = isManageBgMode ? 'none' : 'flex';
                     backgroundActionsBar.style.display = isManageBgMode ? 'flex' : 'none';
                     
-                    // Hide theme-specific buttons in the shared bar when in BG mode
+                    const sharedActions = managerPanel.querySelector('[data-mode="shared"]');
                     reorderModeBtn.style.display = isManageBgMode ? 'none' : 'inline-block';
                     expandAllBtn.style.display = isManageBgMode ? 'none' : 'inline-block';
                     collapseAllBtn.style.display = isManageBgMode ? 'none' : 'inline-block';
@@ -699,7 +693,9 @@
                     for (const file of files) {
                         try {
                             const formData = new FormData();
-                            formData.append('image', file);
+                            // ### FIX START: Use 'avatar' as the key for the uploaded file ###
+                            formData.append('avatar', file);
+                            // ### FIX END ###
                             await uploadBackground(formData);
                             successCount++;
                         } catch (err) {
@@ -711,8 +707,10 @@
                 
                     hideLoader();
                     let message = `背景导入完成！成功 ${successCount} 个，失败 ${errorCount} 个。`;
-                    if (errorCount > 0) {
+                    if (errorCount > 0 && successCount > 0) {
                         toastr.warning(message);
+                    } else if (errorCount > 0 && successCount === 0) {
+                        toastr.error(message);
                     } else {
                         toastr.success(message);
                     }
@@ -751,13 +749,12 @@
                             successCount++;
                         } catch (err) {
                             console.error(`删除背景 "${bgFile}" 时出错:`, err);
-                            toastr.error(`删除背景 "${bgFile}" 失败`);
+                            toastr.error(`删除背景 "${bgFile}" 失败: ${err.message}`);
                             errorCount++;
                         }
                     }
                 
                     hideLoader();
-                    // ### FIX START: Improved feedback for delete operation ###
                     let message = `背景删除完成！成功 ${successCount} 个，失败 ${errorCount} 个。`;
                     if (errorCount > 0 && successCount > 0) {
                         toastr.warning(message);
@@ -766,7 +763,6 @@
                     } else {
                         toastr.success(message);
                     }
-                    // ### FIX END ###
                     
                     selectedBackgrounds.clear();
                     
