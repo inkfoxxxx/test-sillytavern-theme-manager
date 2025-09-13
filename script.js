@@ -16,18 +16,16 @@
                 const COLLAPSE_KEY = 'themeManager_collapsed';
                 const CATEGORY_ORDER_KEY = 'themeManager_categoryOrder';
                 const COLLAPSED_FOLDERS_KEY = 'themeManager_collapsedFolders';
-                const THEME_BACKGROUND_BINDINGS_KEY = 'themeManager_backgroundBindings'; // 【新功能】
+                const THEME_BACKGROUND_BINDINGS_KEY = 'themeManager_backgroundBindings';
 
-                let openCategoriesAfterRefresh = new Set();
                 let allParsedThemes = [];
                 let refreshNeeded = false;
                 let isReorderMode = false;
                 let isManageBgMode = false;
                 let isBindingMode = false;
                 let themeNameToBind = null;
-
-                // 【新功能】背景图批量操作相关变量
                 let selectedBackgrounds = new Set();
+                let originalBgParent = null;
 
                 async function apiRequest(endpoint, method = 'POST', body = {}) {
                     try {
@@ -85,17 +83,6 @@
                     }
                     if (tags.length === 0) tags.push('未分类');
                     return tags;
-                }
-
-                function getCategoriesForThemes(themeNamesSet) {
-                    const categories = new Set();
-                    themeNamesSet.forEach(themeName => {
-                        const theme = allParsedThemes.find(t => t.value === themeName);
-                        if (theme) {
-                            theme.tags.forEach(tag => categories.add(tag));
-                        }
-                    });
-                    return categories;
                 }
 
                 const originalContainer = originalSelect.parentElement;
@@ -306,12 +293,7 @@
 
                             const list = document.createElement('ul');
                             list.className = 'theme-list';
-                            
-                            if (openCategoriesAfterRefresh.size > 0) {
-                                list.style.display = openCategoriesAfterRefresh.has(category) ? 'block' : 'none';
-                            } else {
-                                list.style.display = collapsedFolders.has(category) ? 'none' : 'block';
-                            }
+                            list.style.display = collapsedFolders.has(category) ? 'none' : 'block';
 
                             themesInCategory.forEach(theme => {
                                 const item = document.createElement('li');
@@ -325,6 +307,7 @@
                                     <span class="theme-item-name">${theme.display}</span>
                                     <div class="theme-item-buttons">
                                         <button class="link-bg-btn ${isBound ? 'linked' : ''}" title="关联背景图">🔗</button>
+                                        <button class="unbind-bg-btn" style="display: ${isBound ? 'inline-block' : 'none'}" title="解绑背景">🚫</button>
                                         <button class="favorite-btn" title="收藏">${starCharacter}</button>
                                         <button class="rename-btn" title="重命名">✏️</button>
                                         <button class="delete-btn" title="删除">🗑️</button>
@@ -339,11 +322,9 @@
                         
                         contentWrapper.scrollTop = scrollTop;
                         updateActiveState();
-                        openCategoriesAfterRefresh.clear();
 
                     } catch (err) {
                         contentWrapper.innerHTML = '加载主题失败，请检查浏览器控制台获取更多信息。';
-                        openCategoriesAfterRefresh.clear();
                     }
                 }
 
@@ -353,7 +334,7 @@
                         item.classList.toggle('active', item.dataset.value === currentValue);
                     });
                 }
-
+                
                 async function performBatchRename(renameLogic) {
                     if (selectedForBatch.size === 0) { toastr.info('请先选择至少一个主题。'); return; }
                     showLoader();
@@ -362,12 +343,6 @@
                     let errorCount = 0;
                     let skippedCount = 0;
                     const currentThemes = await getAllThemesFromAPI();
-
-                    openCategoriesAfterRefresh.clear();
-                    getCategoriesForThemes(selectedForBatch).forEach(cat => openCategoriesAfterRefresh.add(cat));
-                    const sampleOldName = Array.from(selectedForBatch)[0];
-                    const sampleNewName = renameLogic(sampleOldName);
-                    getTagsFromThemeName(sampleNewName).forEach(tag => openCategoriesAfterRefresh.add(tag));
 
                     for (const oldName of selectedForBatch) {
                         try {
@@ -420,9 +395,6 @@
                 async function performBatchDelete() {
                     if (selectedForBatch.size === 0) { toastr.info('请先选择至少一个主题。'); return; }
                     if (!confirm(`确定要删除选中的 ${selectedForBatch.size} 个主题吗？`)) return;
-                    
-                    openCategoriesAfterRefresh.clear();
-                    getCategoriesForThemes(selectedForBatch).forEach(cat => openCategoriesAfterRefresh.add(cat));
 
                     showLoader();
                     for (const themeName of selectedForBatch) {
@@ -457,9 +429,7 @@
                     let errorCount = 0;
                     const themesToProcess = new Map();
 
-                    openCategoriesAfterRefresh.clear();
                     selectedFoldersForBatch.forEach(folderName => {
-                        openCategoriesAfterRefresh.add(folderName);
                         allParsedThemes.forEach(theme => {
                             if (theme.tags.includes(folderName)) {
                                 const newName = theme.value.replace(`[${folderName}]`, '').trim();
@@ -467,7 +437,6 @@
                             }
                         });
                     });
-                    openCategoriesAfterRefresh.add('未分类');
 
                     for (const [oldName, newName] of themesToProcess.entries()) {
                         try {
@@ -546,10 +515,8 @@
                     managerPanel.classList.toggle('reorder-mode', isReorderMode);
                     reorderModeBtn.classList.toggle('selected', isReorderMode);
                     reorderModeBtn.textContent = isReorderMode ? '完成排序' : '🔄 调整顺序';
-
-                    if (isReorderMode && isBatchEditMode) {
-                        batchEditBtn.click();
-                    }
+                    if (isReorderMode && isBatchEditMode) batchEditBtn.click();
+                    if (isReorderMode && isManageBgMode) manageBgsBtn.click();
                 });
 
                 batchEditBtn.addEventListener('click', () => {
@@ -559,12 +526,8 @@
                     batchEditBtn.classList.toggle('selected', isBatchEditMode);
                     batchEditBtn.textContent = isBatchEditMode ? '退出批量编辑' : '🔧 批量编辑';
                     
-                    if (isBatchEditMode && isReorderMode) {
-                        reorderModeBtn.click();
-                    }
-                     if (isBatchEditMode && isManageBgMode) {
-                        manageBgsBtn.click();
-                    }
+                    if (isBatchEditMode && isReorderMode) reorderModeBtn.click();
+                     if (isBatchEditMode && isManageBgMode) manageBgsBtn.click();
 
                     if (!isBatchEditMode) {
                         selectedForBatch.clear();
@@ -695,8 +658,6 @@
                             const newFolderName = prompt('请输入新的文件夹名称:', oldFolderName);
 
                             if (newFolderName && newFolderName.trim() && newFolderName !== oldFolderName) {
-                                openCategoriesAfterRefresh.clear();
-                                openCategoriesAfterRefresh.add(newFolderName.trim());
                                 showLoader();
                                 const themesToRename = allParsedThemes.filter(t => t.tags.includes(oldFolderName));
                                 for (const theme of themesToRename) {
@@ -749,10 +710,6 @@
                             const categoryName = categoryTitle.closest('.theme-category').dataset.categoryName;
                             if (!confirm(`确定要解散文件夹 "${categoryName}" 吗？`)) return;
                             
-                            openCategoriesAfterRefresh.clear();
-                            openCategoriesAfterRefresh.add(categoryName);
-                            openCategoriesAfterRefresh.add('未分类');
-
                             showLoader();
                             const themesToUpdate = Array.from(originalSelect.options).map(opt => opt.value).filter(name => name.includes(`[${categoryName}]`));
                             for (const oldName of themesToUpdate) {
@@ -816,11 +773,15 @@
                             return;
                         }
 
-                        if (button && button.classList.contains('favorite-btn')) {
-                            openCategoriesAfterRefresh.clear();
-                            openCategoriesAfterRefresh.add(categoryName);
-                            openCategoriesAfterRefresh.add('⭐ 收藏夹');
+                        if (button && button.classList.contains('unbind-bg-btn')) {
+                            delete themeBackgroundBindings[themeName];
+                            localStorage.setItem(THEME_BACKGROUND_BINDINGS_KEY, JSON.stringify(themeBackgroundBindings));
+                            toastr.success(`主题 "${themeItem.querySelector('.theme-item-name').textContent}" 已解绑背景。`);
+                            await buildThemeUI();
+                            return;
+                        }
 
+                        if (button && button.classList.contains('favorite-btn')) {
                             if (favorites.includes(themeName)) {
                                 favorites = favorites.filter(f => f !== themeName);
                                 button.textContent = '☆';
@@ -835,10 +796,6 @@
                             const oldName = themeName;
                             const newName = prompt(`请输入新名称：`, oldName);
                             if (newName && newName !== oldName) {
-                                openCategoriesAfterRefresh.clear();
-                                openCategoriesAfterRefresh.add(categoryName);
-                                getTagsFromThemeName(newName).forEach(tag => openCategoriesAfterRefresh.add(tag));
-
                                 const themeObject = allThemeObjects.find(t => t.name === oldName);
                                 if (!themeObject) return;
                                 await saveTheme({ ...themeObject, name: newName });
@@ -852,13 +809,11 @@
                                 }
                                 
                                 showRefreshNotification();
+                                await buildThemeUI();
                             }
                         }
                         else if (button && button.classList.contains('delete-btn')) {
                             if (confirm(`确定要删除主题 "${themeItem.querySelector('.theme-item-name').textContent}" 吗？`)) {
-                                openCategoriesAfterRefresh.clear();
-                                openCategoriesAfterRefresh.add(categoryName);
-
                                 const isCurrentlyActive = originalSelect.value === themeName;
                                 await deleteTheme(themeName);
                                 manualUpdateOriginalSelect('delete', themeName);
@@ -874,6 +829,7 @@
                                     originalSelect.dispatchEvent(new Event('change'));
                                 }
                                 showRefreshNotification();
+                                await buildThemeUI();
                             }
                         } else {
                             originalSelect.value = themeName;
@@ -887,7 +843,7 @@
                     const newThemeName = event.target.value;
                     const boundBg = themeBackgroundBindings[newThemeName];
                     if (boundBg) {
-                        const bgElement = document.querySelector(`#bg_menu_content .bg_example[bgfile="${boundBg}"]`);
+                        const bgElement = document.querySelector(`#bg_menu_content .bg_example[bgfile="${boundBg}"], #bg_custom_content .bg_example[bgfile="${boundBg}"]`);
                         if (bgElement) {
                             bgElement.click();
                         }
@@ -895,51 +851,37 @@
                 });
 
                 const observer = new MutationObserver((mutations) => {
-                    openCategoriesAfterRefresh.clear();
-                    for (let mutation of mutations) {
-                        if (mutation.type === 'childList' && (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0)) {
-                            const addedNode = mutation.addedNodes[0];
-                            if (addedNode && addedNode.tagName === 'OPTION' && addedNode.value) {
-                                toastr.success(`已另存为新主题: "${addedNode.value}"`);
-                                getTagsFromThemeName(addedNode.value).forEach(tag => openCategoriesAfterRefresh.add(tag));
-                                showRefreshNotification();
-                            }
-                            buildThemeUI(); 
-                            return; 
-                        }
-                    }
                     buildThemeUI();
                 });
                 observer.observe(originalSelect, { childList: true, subtree: true, characterData: true });
 
                 const bgMenuContent = document.getElementById('bg_menu_content');
-                if (bgMenuContent) {
-                    bgMenuContent.addEventListener('click', async (e) => {
-                        if (!isBindingMode) return;
+                const bgCustomContent = document.getElementById('bg_custom_content');
+                
+                const bgObserverCallback = async (e) => {
+                    if (!isBindingMode) return;
 
-                        e.preventDefault();
-                        e.stopPropagation();
+                    e.preventDefault();
+                    e.stopPropagation();
 
-                        const bgElement = e.target.closest('.bg_example');
-                        if (!bgElement) return;
+                    const bgElement = e.target.closest('.bg_example');
+                    if (!bgElement) return;
 
-                        const bgFileName = bgElement.getAttribute('bgfile');
-                        themeBackgroundBindings[themeNameToBind] = bgFileName;
-                        localStorage.setItem(THEME_BACKGROUND_BINDINGS_KEY, JSON.stringify(themeBackgroundBindings));
+                    const bgFileName = bgElement.getAttribute('bgfile');
+                    themeBackgroundBindings[themeNameToBind] = bgFileName;
+                    localStorage.setItem(THEME_BACKGROUND_BINDINGS_KEY, JSON.stringify(themeBackgroundBindings));
 
-                        toastr.success(`背景已成功绑定到主题！`);
+                    toastr.success(`背景已成功绑定到主题！`);
 
-                        isBindingMode = false;
-                        themeNameToBind = null;
-                        document.querySelector('#logo_block .drawer-toggle').click();
+                    isBindingMode = false;
+                    themeNameToBind = null;
+                    document.querySelector('#logo_block .drawer-toggle').click();
 
-                        const theme = allParsedThemes.find(t => t.value === bgElement.dataset.themeName);
-                        if (theme) {
-                            getCategoriesForThemes(new Set([bgElement.dataset.themeName])).forEach(cat => openCategoriesAfterRefresh.add(cat));
-                        }
-                        await buildThemeUI();
-                    }, true);
-                }
+                    await buildThemeUI();
+                };
+
+                if (bgMenuContent) bgMenuContent.addEventListener('click', bgObserverCallback, true);
+                if (bgCustomContent) bgCustomContent.addEventListener('click', bgObserverCallback, true);
 
                 buildThemeUI().then(() => {
                     const isInitiallyCollapsed = localStorage.getItem(COLLAPSE_KEY) !== 'false';
