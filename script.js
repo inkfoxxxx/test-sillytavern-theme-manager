@@ -27,7 +27,6 @@
                 let selectedBackgrounds = new Set();
                 let originalBgParent = null;
 
-                // ### FIX START: 改进了API请求的错误处理 ###
                 async function apiRequest(endpoint, method = 'POST', body = {}) {
                     try {
                         const headers = getRequestHeaders();
@@ -38,44 +37,33 @@
                         const response = await fetch(`/api/${endpoint}`, options);
                         const responseText = await response.text();
                         if (!response.ok) {
-                            // 检查响应是否为JSON，如果不是，直接抛出文本内容
-                            try {
-                                const errorData = JSON.parse(responseText);
-                                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-                            } catch (e) {
-                                // 如果解析JSON失败，说明返回的不是JSON（比如HTML错误页），直接抛出原始文本
-                                throw new Error(responseText.trim() || `HTTP error! status: ${response.status}`);
-                            }
+                            try { const errorData = JSON.parse(responseText); throw new Error(errorData.error || `HTTP error! status: ${response.status}`); }
+                            catch (e) { throw new Error(responseText || `HTTP error! status: ${response.status}`); }
                         }
                         if (responseText.trim().toUpperCase() === 'OK') return { status: 'OK' };
                         return responseText ? JSON.parse(responseText) : {};
                     } catch (error) {
                         console.error(`API request to /api/${endpoint} failed:`, error);
-                        // 清理HTML标签，让错误提示更易读
-                        const errorMessage = error.message.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-                        toastr.error(`API请求失败: ${errorMessage}`);
+                        toastr.error(`API请求失败: ${error.message}`);
                         throw error;
                     }
                 }
-                // ### FIX END ###
-
                 async function getAllThemesFromAPI() { return (await apiRequest('settings/get', 'POST', {})).themes || []; }
                 async function deleteTheme(themeName) { await apiRequest('themes/delete', 'POST', { name: themeName }); }
                 async function saveTheme(themeObject) { await apiRequest('themes/save', 'POST', themeObject); }
                 async function deleteBackground(bgFile) { await apiRequest('backgrounds/delete', 'POST', { name: bgFile }); }
 
-                // ### FIX START: 改进了上传背景的错误处理 ###
+                // ### FIX START: Improved uploadBackground to handle server errors ###
                 async function uploadBackground(formData) {
                     const headers = getRequestHeaders();
                     delete headers['Content-Type'];
                     const response = await fetch('/api/backgrounds/upload', { method: 'POST', headers, body: formData });
                     if (!response.ok) {
-                        const errorText = await response.text();
-                        throw new Error(errorText || `Upload failed with status: ${response.status}`);
+                        const responseText = await response.text();
+                        throw new Error(responseText || `HTTP error! status: ${response.status}`);
                     }
                 }
                 // ### FIX END ###
-
 
                 function manualUpdateOriginalSelect(action, oldName, newName) {
                     const originalSelect = document.querySelector('#themes');
@@ -121,23 +109,23 @@
                             💡 <b>提示：</b>检测到主题文件变更。为确保所有更改完全生效，请在完成所有操作后
                             <a id="theme-manager-refresh-page-btn" style="color:var(--primary-color, #007bff); text-decoration:underline; cursor:pointer; font-weight:bold;">刷新页面</a>。
                         </div>
-                        <div class="theme-manager-actions">
+                        <div class="theme-manager-actions" data-mode="theme">
                             <input type="search" id="theme-search-box" placeholder="🔍 搜索主题...">
                             <button id="random-theme-btn" title="随机应用一个主题">🎲 随机</button>
                             <button id="batch-edit-btn" title="进入/退出批量编辑模式">🔧 批量编辑</button>
                             <button id="batch-import-btn" title="从文件批量导入主题">📂 批量导入</button>
                         </div>
-                        <div class="theme-manager-actions">
+                        <div class="theme-manager-actions" data-mode="shared">
                             <button id="reorder-mode-btn" title="调整文件夹顺序">🔄 调整顺序</button>
                             <button id="expand-all-btn" title="展开所有文件夹">全部展开</button>
                             <button id="collapse-all-btn" title="折叠所有文件夹">全部折叠</button>
                             <button id="manage-bgs-btn" title="管理背景图">🖼️ 管理背景</button>
                         </div>
-                        <div id="background-actions-bar" style="display:none;">
+                        <div id="background-actions-bar" style="display:none;" data-mode="bg">
                             <button id="batch-import-bg-btn">➕ 批量导入背景</button>
                             <button id="batch-delete-bg-btn" disabled>🗑️ 删除选中背景</button>
                         </div>
-                        <div id="batch-actions-bar">
+                        <div id="batch-actions-bar" style="display:none;" data-mode="theme">
                             <button id="batch-add-tag-btn">➕ 添加标签</button>
                             <button id="batch-move-tag-btn">➡️ 移动到分类</button>
                             <button id="batch-delete-tag-btn">❌ 移除标签</button>
@@ -245,14 +233,15 @@
                 
                     const bgListContainer = document.createElement('div');
                     bgListContainer.className = 'bg_list';
+
+                    // ### FIX START: Define protected backgrounds ###
+                    const protectedBgs = ['_transparent.png', '_black.png', '_white.png'];
+                    // ### FIX END ###
                 
                     const systemBgs = document.querySelectorAll('#bg_menu_content .bg_example');
                     const customBgs = document.querySelectorAll('#bg_custom_content .bg_example');
                 
                     const allBgs = [...systemBgs, ...customBgs];
-                    // ### FIX START: 添加了保护列表 ###
-                    const protectedBgs = ['_transparent.png', '_black.png', '_white.png'];
-                    // ### FIX END ###
                 
                     if (allBgs.length === 0) {
                         contentWrapper.innerHTML = '没有找到背景图。';
@@ -261,12 +250,11 @@
                 
                     allBgs.forEach(bg => {
                         const bgFile = bg.getAttribute('bgfile');
-                        // ### FIX START: 排除“添加”按钮和受保护的背景 ###
+                        // ### FIX START: Exclude add button and protected backgrounds ###
                         if (bg.querySelector('.add_bg_but') || bg.classList.contains('add_bg_but') || protectedBgs.includes(bgFile)) return;
                         // ### FIX END ###
                 
                         const clone = bg.cloneNode(true);
-                        
                         const checkbox = document.createElement('input');
                         checkbox.type = 'checkbox';
                         checkbox.className = 'bg-select-checkbox';
@@ -604,12 +592,12 @@
                 batchEditBtn.addEventListener('click', () => {
                     isBatchEditMode = !isBatchEditMode;
                     managerPanel.classList.toggle('batch-edit-mode', isBatchEditMode);
-                    batchActionsBar.classList.toggle('visible', isBatchEditMode);
+                    batchActionsBar.style.display = isBatchEditMode ? 'flex' : 'none';
                     batchEditBtn.classList.toggle('selected', isBatchEditMode);
                     batchEditBtn.textContent = isBatchEditMode ? '退出批量编辑' : '🔧 批量编辑';
                     
                     if (isBatchEditMode && isReorderMode) reorderModeBtn.click();
-                     if (isBatchEditMode && isManageBgMode) manageBgsBtn.click();
+                    if (isBatchEditMode && isManageBgMode) manageBgsBtn.click();
 
                     if (!isBatchEditMode) {
                         selectedForBatch.clear();
@@ -620,19 +608,25 @@
                     }
                 });
                 
-                // ### FIX START: 更精确的按钮显隐控制 ###
                 manageBgsBtn.addEventListener('click', () => {
                     isManageBgMode = !isManageBgMode;
                     managerPanel.classList.toggle('manage-bg-mode', isManageBgMode);
                     manageBgsBtn.classList.toggle('selected', isManageBgMode);
                     manageBgsBtn.textContent = isManageBgMode ? '完成管理' : '🖼️ 管理背景';
-
-                    // 切换模式时，确保主题相关的操作按钮栏是隐藏的
-                    batchActionsBar.classList.remove('visible');
-                    // 并且批量编辑模式是关闭的
-                    if (isBatchEditMode) batchEditBtn.click();
-
+                
+                    // ### FIX START: Improved visibility logic for action bars ###
+                    managerPanel.querySelector('.theme-manager-actions[data-mode="theme"]').style.display = isManageBgMode ? 'none' : 'flex';
+                    managerPanel.querySelector('.theme-manager-actions[data-mode="shared"]').style.display = 'flex'; // This bar is always visible in some form
+                    backgroundActionsBar.style.display = isManageBgMode ? 'flex' : 'none';
+                    
+                    // Hide theme-specific buttons in the shared bar when in BG mode
+                    reorderModeBtn.style.display = isManageBgMode ? 'none' : 'inline-block';
+                    expandAllBtn.style.display = isManageBgMode ? 'none' : 'inline-block';
+                    collapseAllBtn.style.display = isManageBgMode ? 'none' : 'inline-block';
+                    // ### FIX END ###
+                
                     if (isManageBgMode) {
+                        if (isBatchEditMode) batchEditBtn.click();
                         if (isReorderMode) reorderModeBtn.click();
                         renderBackgroundManagerUI();
                     } else {
@@ -640,7 +634,6 @@
                         buildThemeUI();
                     }
                 });
-                // ### FIX END ###
 
                 expandAllBtn.addEventListener('click', () => {
                     localStorage.setItem(COLLAPSED_FOLDERS_KEY, JSON.stringify([]));
@@ -717,7 +710,12 @@
                     }
                 
                     hideLoader();
-                    toastr.info(`背景导入完成！成功 ${successCount} 个，失败 ${errorCount} 个。`);
+                    let message = `背景导入完成！成功 ${successCount} 个，失败 ${errorCount} 个。`;
+                    if (errorCount > 0) {
+                        toastr.warning(message);
+                    } else {
+                        toastr.success(message);
+                    }
                     
                     document.querySelector('#site_logo').click();
                     setTimeout(() => {
@@ -752,16 +750,22 @@
                             await deleteBackground(bgFile);
                             successCount++;
                         } catch (err) {
+                            console.error(`删除背景 "${bgFile}" 时出错:`, err);
+                            toastr.error(`删除背景 "${bgFile}" 失败`);
                             errorCount++;
                         }
                     }
                 
                     hideLoader();
-                    // ### FIX START: 改进了删除完成后的提示 ###
-                    let summary = `背景删除完成！成功 ${successCount} 个`;
-                    if (errorCount > 0) summary += `，失败 ${errorCount} 个`;
-                    summary += '。';
-                    toastr.info(summary);
+                    // ### FIX START: Improved feedback for delete operation ###
+                    let message = `背景删除完成！成功 ${successCount} 个，失败 ${errorCount} 个。`;
+                    if (errorCount > 0 && successCount > 0) {
+                        toastr.warning(message);
+                    } else if (errorCount > 0 && successCount === 0) {
+                        toastr.error(message);
+                    } else {
+                        toastr.success(message);
+                    }
                     // ### FIX END ###
                     
                     selectedBackgrounds.clear();
