@@ -48,34 +48,30 @@
                 async function deleteTheme(themeName) { await apiRequest('themes/delete', 'POST', { name: themeName }); }
                 async function saveTheme(themeObject) { await apiRequest('themes/save', 'POST', themeObject); }
 
-                // ### 最终解决方案 v5：使用 jQuery.ajax 完全模仿原生行为 ###
+                                // ### 最终解决方案 v6：使用正确的 FormData 键名 'avatar' ###
                 async function deleteBackground(bgFile) {
                     const formData = new FormData();
+                    // 关键修复：服务器期望的键名是 'avatar'，而不是 'name' 或 'bg'
                     formData.append('avatar', bgFile);
 
-                    // SillyTavern的原生script.js已经配置了jQuery，使其自动在所有ajax请求中添加必要的CSRF-Token。
-                    // 因此我们不需要手动处理headers。
+                    const headers = getRequestHeaders();
+                    delete headers['Content-Type']; // 让浏览器自动设置 multipart/form-data 头
 
-                    // 因为$.ajax是基于回调的，我们需要将它包装在Promise中，以便在我们的async函数中使用await
-                    return new Promise((resolve, reject) => {
-                        $.ajax({
-                            type: 'POST',
-                            url: '/api/backgrounds/delete',
-                            data: formData,
-                            processData: false, // 必须为false，告诉jQuery不要处理我们的FormData
-                            contentType: false, // 必须为false，让浏览器设置正确的multipart/form-data头
-                            success: function (response) {
-                                // 请求成功，Promise解决
-                                resolve(response);
-                            },
-                            error: function (jqXHR, textStatus, errorThrown) {
-                                // 请求失败，Promise拒绝
-                                const errorMsg = jqXHR.responseText || errorThrown;
-                                console.error(`删除背景 "${bgFile}" 时出错:`, errorMsg);
-                                reject(new Error(errorMsg));
-                            }
+                    try {
+                        const response = await fetch('/api/backgrounds/delete', {
+                            method: 'POST',
+                            headers: headers,
+                            body: formData
                         });
-                    });
+
+                        if (!response.ok) {
+                            const responseText = await response.text();
+                            throw new Error(responseText || `HTTP error! status: ${response.status}`);
+                        }
+                    } catch (error) {
+                        console.error(`删除背景 "${bgFile}" 时出错:`, error);
+                        throw error;
+                    }
                 }
                 // ### 解决方案结束 ###
 
@@ -1115,3 +1111,4 @@
         }
     }, 250);
 })();
+
