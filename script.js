@@ -1,5 +1,5 @@
 (function () {
-    'true';
+    'use strict';
 
     const initInterval = setInterval(() => {
         const originalSelect = document.querySelector('#themes');
@@ -15,7 +15,7 @@
                 const FAVORITES_KEY = 'themeManager_favorites';
                 const COLLAPSE_KEY = 'themeManager_collapsed';
                 const CATEGORY_ORDER_KEY = 'themeManager_categoryOrder';
-                const COLLAPSED_FOLDERS_KEY = 'themeManager_collapsedFolders';
+                const COLLAPSED_FOLD_ERS_KEY = 'themeManager_collapsedFolders';
                 const THEME_BACKGROUND_BINDINGS_KEY = 'themeManager_backgroundBindings';
 
                 let allParsedThemes = [];
@@ -102,13 +102,13 @@
                             💡 <b>提示：</b>检测到主题文件变更。为确保所有更改完全生效，请在完成所有操作后
                             <a id="theme-manager-refresh-page-btn" style="color:var(--primary-color, #007bff); text-decoration:underline; cursor:pointer; font-weight:bold;">刷新页面</a>。
                         </div>
-                        <div class="theme-manager-actions">
+                        <div class="theme-manager-actions" data-id="actions-1">
                             <input type="search" id="theme-search-box" placeholder="🔍 搜索主题...">
                             <button id="random-theme-btn" title="随机应用一个主题">🎲 随机</button>
                             <button id="batch-edit-btn" title="进入/退出批量编辑模式">🔧 批量编辑</button>
                             <button id="batch-import-btn" title="从文件批量导入主题">📂 批量导入</button>
                         </div>
-                        <div class="theme-manager-actions">
+                        <div class="theme-manager-actions" data-id="actions-2">
                             <button id="reorder-mode-btn" title="调整文件夹顺序">🔄 调整顺序</button>
                             <button id="expand-all-btn" title="展开所有文件夹">全部展开</button>
                             <button id="collapse-all-btn" title="折叠所有文件夹">全部折叠</button>
@@ -226,6 +226,10 @@
                 
                     const bgListContainer = document.createElement('div');
                     bgListContainer.className = 'bg_list';
+
+                    // ### FIX START: List of protected backgrounds to exclude ###
+                    const protectedBgs = ['_transparent', '_black', '_white'];
+                    // ### FIX END ###
                 
                     const systemBgs = document.querySelectorAll('#bg_menu_content .bg_example');
                     const customBgs = document.querySelectorAll('#bg_custom_content .bg_example');
@@ -238,13 +242,13 @@
                     }
                 
                     allBgs.forEach(bg => {
-                        // ### FIX START: Exclude the "Add Background" button ###
-                        if (bg.querySelector('.add_bg_but') || bg.classList.contains('add_bg_but')) return;
+                        const bgFile = bg.getAttribute('bgfile');
+                        // ### FIX START: Exclude "Add" button and protected backgrounds ###
+                        if (bg.querySelector('.add_bg_but') || bg.classList.contains('add_bg_but') || protectedBgs.includes(bgFile)) return;
                         // ### FIX END ###
                 
                         const clone = bg.cloneNode(true);
-                        const bgFile = clone.getAttribute('bgfile');
-                
+                        
                         const checkbox = document.createElement('input');
                         checkbox.type = 'checkbox';
                         checkbox.className = 'bg-select-checkbox';
@@ -598,29 +602,33 @@
                     }
                 });
                 
-                // ### FIX START: Improved visibility logic for action bars ###
                 manageBgsBtn.addEventListener('click', () => {
                     isManageBgMode = !isManageBgMode;
                     managerPanel.classList.toggle('manage-bg-mode', isManageBgMode);
                     manageBgsBtn.classList.toggle('selected', isManageBgMode);
                     manageBgsBtn.textContent = isManageBgMode ? '完成管理' : '🖼️ 管理背景';
-
-                    // Explicitly hide/show action bars
-                    document.querySelectorAll('.theme-manager-actions').forEach(bar => {
+                
+                    // ### FIX START: Correctly toggle visibility of action bars ###
+                    document.querySelectorAll('.theme-manager-actions[data-id="actions-1"]').forEach(bar => {
+                        bar.style.display = isManageBgMode ? 'none' : 'flex';
+                    });
+                     document.querySelectorAll('.theme-manager-actions[data-id="actions-2"]:not(:has(#manage-bgs-btn))').forEach(bar => {
                         bar.style.display = isManageBgMode ? 'none' : 'flex';
                     });
                     backgroundActionsBar.style.display = isManageBgMode ? 'flex' : 'none';
+                    // ### FIX END ###
                 
                     if (isManageBgMode) {
                         if (isBatchEditMode) batchEditBtn.click();
                         if (isReorderMode) reorderModeBtn.click();
                         renderBackgroundManagerUI();
                     } else {
+                        // Show the main action bar when exiting bg mode
+                        document.querySelector('.theme-manager-actions[data-id="actions-1"]').style.display = 'flex';
                         selectedBackgrounds.clear();
                         buildThemeUI();
                     }
                 });
-                // ### FIX END ###
 
                 expandAllBtn.addEventListener('click', () => {
                     localStorage.setItem(COLLAPSED_FOLDERS_KEY, JSON.stringify([]));
@@ -675,6 +683,7 @@
                     fileInput.click();
                 });
 
+                // ### FIX START: Correct FormData for background upload ###
                 bgFileInput.addEventListener('change', async (event) => {
                     const files = event.target.files;
                     if (!files.length) return;
@@ -686,7 +695,8 @@
                     for (const file of files) {
                         try {
                             const formData = new FormData();
-                            formData.append('image', file);
+                            // The server expects the file to be appended with the 'image' key and the filename
+                            formData.append('image', file, file.name); 
                             await uploadBackground(formData);
                             successCount++;
                         } catch (err) {
@@ -699,6 +709,7 @@
                     hideLoader();
                     toastr.success(`背景导入完成！成功 ${successCount} 个，失败 ${errorCount} 个。`);
                     
+                    // Force SillyTavern to refresh its internal list of backgrounds
                     document.querySelector('#site_logo').click();
                     setTimeout(() => {
                         document.querySelector('#site_logo').click();
@@ -709,6 +720,7 @@
                 
                     event.target.value = '';
                 });
+                // ### FIX END ###
 
                 batchImportBgBtn.addEventListener('click', () => {
                     bgFileInput.click();
@@ -733,13 +745,22 @@
                             successCount++;
                         } catch (err) {
                             console.error(`删除背景 "${bgFile}" 时出错:`, err);
-                            toastr.error(`删除背景 "${bgFile}" 失败`);
                             errorCount++;
                         }
                     }
                 
                     hideLoader();
-                    toastr.success(`背景删除完成！成功 ${successCount} 个，失败 ${errorCount} 个。`);
+                    // ### FIX START: More accurate success/failure toast ###
+                    let summary = `背景删除完成！`;
+                    if (successCount > 0) summary += `成功 ${successCount} 个`;
+                    if (errorCount > 0) summary += `，失败 ${errorCount} 个`;
+                    summary += '。';
+                    if (errorCount > 0) {
+                        toastr.warning(summary);
+                    } else {
+                        toastr.success(summary);
+                    }
+                    // ### FIX END ###
                     
                     selectedBackgrounds.clear();
                     
