@@ -11,6 +11,7 @@
 }
 
 #theme-manager-header { cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+/* 【代码优化】您将 :hover 的背景设为 none，为保持交互感，我将其改为透明色，这样不会影响布局 */
 #theme-manager-header:hover { background-color: rgba(0,0,0,0.05); } 
 #theme-manager-header h4 { margin: 0; border: none; padding: 0; color: var(--main-text-color); background:none; }
 #theme-manager-toggle-icon { transition: transform 0.3s ease; color: var(--main-text-color); }
@@ -19,8 +20,8 @@
 #UI-presets-block { gap: 0 !important; }
 .theme-manager-actions { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
 .theme-manager-actions input[type="search"] { flex-grow: 1; background-color: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--main-text-color); border-radius: 4px; padding: 5px 8px; min-width: 150px; }
-.theme-manager-actions button, #batch-actions-bar button, #background-actions-bar button { background-color: rgba(128,128,128,0.2); color: var(--main-text-color); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; white-space: nowrap; }
-.theme-manager-actions button:hover, #batch-actions-bar button:hover, #background-actions-bar button:hover { background-color: rgba(128,128,128,0.4); }
+.theme-manager-actions button, #batch-actions-bar button { background-color: rgba(128,128,128,0.2); color: var(--main-text-color); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; white-space: nowrap; }
+.theme-manager-actions button:hover, #batch-actions-bar button:hover { background-color: rgba(128,128,128,0.4); }
 .theme-manager-actions button.selected, #batch-actions-bar button { background-color: var(--primary-color, #007bff); color: white; border-color: transparent; }
 #batch-actions-bar { display: none; flex-wrap: wrap; gap: 8px; background-color: transparent; padding: 0; border-radius: 4px; margin-bottom: 10px; }
 #batch-actions-bar.visible { display: flex; }
@@ -28,25 +29,63 @@
 .theme-category-title { font-weight: bold; color: var(--quote-color); cursor: pointer; padding: 8px 5px; background-color: rgba(0,0,0,0.15); border-radius: 4px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s; }
 .dissolve-folder-btn { background: none; border: none; color: var(--danger-color, #ff5555); cursor: pointer; font-size: 14px; opacity: 0.7; }
 
-.rename-folder-btn { background: none; border: none; cursor: pointer; font-size: 16px; opacity: 0.7; padding: 2px 5px; color: var(--main-text-color); transition: opacity 0.2s, transform 0.2s; }
-.rename-folder-btn:hover, .dissolve-folder-btn:hover { opacity: 1; transform: scale(1.2); }
-.folder-buttons { display: flex; gap: 8px; align-items: center; }
+/* 为文件夹重命名按钮（铅笔图标）去除背景和边框 */
+.rename-folder-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px; 
+    opacity: 0.7;
+    padding: 2px 5px;
+    color: var(--main-text-color);
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+/* 鼠标悬停在重命名或解散按钮上时的效果 */
+.rename-folder-btn:hover,
+.dissolve-folder-btn:hover {
+    opacity: 1;
+    transform: scale(1.2);
+}
+
+/* 将重命名和解散按钮组合到一个容器中，方便布局 */
+.folder-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
 
 .theme-list { 
-    display: flex; flex-direction: column; gap: 2px;
-    padding-left: 0; margin-top: 5px; width: 100%; box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-left: 0; 
+    margin-top: 5px; 
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .theme-list > .theme-item {
-    width: 100%; box-sizing: border-box; padding: 8px; border-radius: 4px; 
-    list-style: none; color: var(--main-text-color); display: flex; 
-    justify-content: space-between; align-items: center; cursor: pointer; 
-    border: 2px solid transparent; transition: background-color 0.2s, border-color 0.2s; 
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px; 
+    border-radius: 4px; 
+    list-style: none; 
+    color: var(--main-text-color); 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    cursor: pointer; 
+    border: 2px solid transparent; 
+    transition: background-color 0.2s, border-color 0.2s; 
 }
 
 .theme-item-name {
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    flex-grow: 1; padding-right: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-grow: 1;
+    padding-right: 10px;
 }
 
 .theme-item:hover { background-color: rgba(128,128,128,0.2); }
@@ -55,70 +94,133 @@
 .theme-item.active.selected-for-batch { box-shadow: 0 0 0 2px var(--quote-color); }
 .batch-edit-mode .theme-item-buttons { display: none; }
 
-.theme-item-buttons { display: flex; gap: 5px; flex-shrink: 0; }
+.theme-item-buttons { 
+    display: flex; 
+    gap: 5px; 
+    flex-shrink: 0;
+}
+
 .theme-item-buttons button { background: none; border: none; cursor: pointer; font-size: 16px; opacity: 0.5; transition: opacity 0.2s, transform 0.2s; padding: 2px; color: var(--main-text-color); }
 .theme-item-buttons button:hover { opacity: 1; transform: scale(1.2); }
 .theme-item:hover .theme-item-buttons button { opacity: 1; }
 
-#theme-manager-panel .folder-select-checkbox { display: none; }
-#theme-manager-panel.batch-edit-mode .theme-category-title { cursor: pointer; }
-#theme-manager-panel.batch-edit-mode .theme-category-title:hover { background-color: rgba(255, 255, 255, 0.1); }
-#theme-manager-panel.batch-edit-mode .folder-buttons { display: none; }
+/* ========================================= */
+/* == 【批量编辑模式的核心视觉修复与增强】 == */
+/* ========================================= */
+
+#theme-manager-panel .folder-select-checkbox {
+    display: none;
+}
+
+#theme-manager-panel.batch-edit-mode .theme-category-title {
+    cursor: pointer;
+}
+#theme-manager-panel.batch-edit-mode .theme-category-title:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* 【代码优化】在批量编辑模式下，也隐藏文件夹按钮 */
+#theme-manager-panel.batch-edit-mode .folder-buttons {
+    display: none;
+}
 
 #theme-manager-panel.batch-edit-mode .folder-select-checkbox {
-    display: inline-block; position: relative; -webkit-appearance: none; appearance: none;
-    background-color: transparent; border: 1px solid var(--border-color, #888); border-radius: 3px;
-    width: 15px; height: 15px; margin-right: 8px; cursor: pointer; transition: background-color 0.2s, border-color 0.2s;
+    display: inline-block;
+    position: relative;
+    -webkit-appearance: none;
+    appearance: none;
+    background-color: transparent;
+    border: 1px solid var(--border-color, #888);
+    border-radius: 3px;
+    width: 15px;
+    height: 15px;
+    margin-right: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
 }
 
 #theme-manager-panel.batch-edit-mode .folder-select-checkbox::before {
-    content: '✔'; position: absolute; top: 48%; left: 50%;
-    transform: translate(-50%, -50%) scale(0); font-size: 14px; font-weight: bold;
-    color: var(--SmartThemeCheckboxTickColor, white); transition: transform 0.1s ease-in-out;
+    content: '✔';
+    position: absolute;
+    top: 48%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--SmartThemeCheckboxTickColor, white);
+    transition: transform 0.1s ease-in-out;
 }
 
-#theme-manager-panel.batch-edit-mode .folder-select-checkbox:checked::before { transform: translate(-50%, -50%) scale(1); }
-.theme-category-title.selected-for-batch { background-color: var(--primary-color, #0056b3); color: white; }
-.theme-category-title.selected-for-batch:hover { background-color: color-mix(in srgb, var(--primary-color, #0056b3) 90%, white); }
-.theme-category-title.selected-for-batch span { color: white; }
-.theme-category-title.selected-for-batch .folder-select-checkbox { border-color: white; }
-.theme-category-title.selected-for-batch .folder-select-checkbox:checked { background-color: rgba(255, 255, 255, 0.3); }
+#theme-manager-panel.batch-edit-mode .folder-select-checkbox:checked::before {
+    transform: translate(-50%, -50%) scale(1);
+}
 
-/* == 排序模式样式 == */
+.theme-category-title.selected-for-batch {
+    background-color: var(--primary-color, #0056b3);
+    color: white;
+}
+.theme-category-title.selected-for-batch:hover {
+    background-color: color-mix(in srgb, var(--primary-color, #0056b3) 90%, white);
+}
+.theme-category-title.selected-for-batch span {
+    color: white;
+}
+.theme-category-title.selected-for-batch .folder-select-checkbox {
+    border-color: white;
+}
+.theme-category-title.selected-for-batch .folder-select-checkbox:checked {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* =========================== */
+/* == 【新功能】排序模式样式  == */
+/* =========================== */
+
 .folder-reorder-buttons { display: none; gap: 8px; }
 .move-folder-up-btn, .move-folder-down-btn { background: none; border: none; cursor: pointer; font-size: 16px; opacity: 0.7; transition: opacity 0.2s, transform 0.2s; padding: 2px; color: var(--main-text-color); }
 .move-folder-up-btn:hover, .move-folder-down-btn:hover { opacity: 1; transform: scale(1.2); }
-#theme-manager-panel.reorder-mode .folder-buttons, #theme-manager-panel.reorder-mode .folder-select-checkbox, #theme-manager-panel.reorder-mode .theme-item-buttons { display: none; }
-#theme-manager-panel.reorder-mode .folder-reorder-buttons { display: flex; }
-#theme-manager-panel.reorder-mode .theme-list { display: none !important; }
-#theme-manager-panel.reorder-mode .theme-category-title { cursor: grab; }
-#theme-manager-panel.reorder-mode .theme-category-title:active { cursor: grabbing; }
 
-/* == 背景绑定与管理样式 == */
-.theme-item-buttons .link-bg-btn { color: var(--main-text-color); }
-.theme-item-buttons .link-bg-btn.linked { color: var(--primary-color, #007bff); text-shadow: 0 0 5px var(--primary-color, #007bff); }
-
-#theme-manager-panel.manage-bg-mode .theme-category { display: none; }
-.bg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; padding: 10px 0; }
-.bg-item { position: relative; aspect-ratio: 16 / 9; background-size: cover; background-position: center; border-radius: 6px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s; }
-.bg-item:hover { border-color: var(--primary-color, #007bff); }
-.bg-select-checkbox { position: absolute; top: 5px; left: 5px; width: 20px; height: 20px; }
-
-#theme-manager-bg-popup { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); z-index: 1050; display: flex; justify-content: center; align-items: center; }
-#theme-manager-bg-popup .popup-content { background-color: var(--blur-tint-color); padding: 20px; border-radius: 8px; max-width: 80vw; max-height: 80vh; overflow-y: auto; border: 1px solid var(--border-color); position: relative; }
-#theme-manager-bg-popup .popup-close { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: var(--main-text-color); }
-#theme-manager-bg-popup h4 { text-align: center; margin-top: 0; }
-.popup-bg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 15px; }
-.popup-bg-item { aspect-ratio: 16 / 9; background-size: cover; background-position: center; border-radius: 6px; cursor: pointer; border: 3px solid transparent; transition: border-color 0.2s; }
-.popup-bg-item:hover { border-color: var(--quote-color); }
-.popup-bg-item.selected { border-color: var(--primary-color, #007bff); box-shadow: 0 0 8px var(--primary-color, #007bff); }
-.popup-actions { text-align: right; margin-top: 20px; }
-.popup-actions button { margin-left: 10px; }
+/* 当进入排序模式时... */
+#theme-manager-panel.reorder-mode .folder-buttons,
+#theme-manager-panel.reorder-mode .folder-select-checkbox,
+#theme-manager-panel.reorder-mode .theme-item-buttons {
+    display: none; /* 隐藏常规文件夹按钮和主题按钮 */
+}
+#theme-manager-panel.reorder-mode .folder-reorder-buttons {
+    display: flex; /* 显示排序按钮 */
+}
+#theme-manager-panel.reorder-mode .theme-list {
+    display: none !important; /* 强制隐藏主题列表，让界面更整洁 */
+}
+#theme-manager-panel.reorder-mode .theme-category-title {
+    cursor: grab; /* 更改鼠标指针为抓取手势，提供可移动的视觉提示 */
+}
+#theme-manager-panel.reorder-mode .theme-category-title:active {
+    cursor: grabbing; /* 拖动时的手势 */
+}
 
 
+/* =================================== */
+/* == 移动端响应式设计 (手机版样式) == */
+/* =================================== */
 @media (max-width: 768px) {
-    .theme-list > .theme-item { width: 100%; box-sizing: border-box; flex-wrap: wrap; justify-content: flex-start; }
-    .theme-item-name { white-space: normal; overflow: visible; text-overflow: clip; min-width: 0; flex-grow: 1; }
-    .theme-item-buttons { margin-left: auto; flex-shrink: 0; }
-    .popup-bg-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+    .theme-list > .theme-item {
+        width: 100%;
+        box-sizing: border-box;
+        flex-wrap: wrap; 
+        justify-content: flex-start;
+    }
+
+    .theme-item-name {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        min-width: 0;
+        flex-grow: 1;
+    }
+
+    .theme-item-buttons {
+        margin-left: auto; 
+        flex-shrink: 0;
+    }
 }
