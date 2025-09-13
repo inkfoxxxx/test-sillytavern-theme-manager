@@ -15,7 +15,7 @@
                 const FAVORITES_KEY = 'themeManager_favorites';
                 const COLLAPSE_KEY = 'themeManager_collapsed';
                 const CATEGORY_ORDER_KEY = 'themeManager_categoryOrder';
-                const COLLAPSED_FOLDERS_KEY = 'themeManager_collapsedFolders';
+                const COLLAPSED_FOLD_KEY = 'themeManager_collapsedFolders';
                 const THEME_BACKGROUND_BINDINGS_KEY = 'themeManager_backgroundBindings';
 
                 let allParsedThemes = [];
@@ -51,11 +51,7 @@
                 async function getAllThemesFromAPI() { return (await apiRequest('settings/get', 'POST', {})).themes || []; }
                 async function deleteTheme(themeName) { await apiRequest('themes/delete', 'POST', { name: themeName }); }
                 async function saveTheme(themeObject) { await apiRequest('themes/save', 'POST', themeObject); }
-                
-                // ### FIX START: Corrected the key in the JSON body from 'name' to 'file' ###
                 async function deleteBackground(bgFile) { await apiRequest('backgrounds/delete', 'POST', { file: bgFile }); }
-                // ### FIX END ###
-
                 async function uploadBackground(formData) {
                     const headers = getRequestHeaders();
                     delete headers['Content-Type'];
@@ -99,7 +95,6 @@
 
                 const managerPanel = document.createElement('div');
                 managerPanel.id = 'theme-manager-panel';
-                // ### FIX START: Polished and generalized the refresh notification text ###
                 managerPanel.innerHTML = `
                     <div id="theme-manager-header">
                         <h4>🎨 主题美化管理</h4>
@@ -136,7 +131,6 @@
                         </div>
                         <div class="theme-content"></div>
                     </div>`;
-                // ### FIX END ###
                 originalContainer.prepend(managerPanel);
                 
                 const nativeButtonsContainer = managerPanel.querySelector('#native-buttons-container');
@@ -230,6 +224,7 @@
                     }
                 }
 
+                // ### FIX START: Differentiate between system and custom backgrounds ###
                 async function renderBackgroundManagerUI() {
                     const scrollTop = contentWrapper.scrollTop;
                     contentWrapper.innerHTML = '正在加载背景图...';
@@ -237,25 +232,26 @@
                     const bgListContainer = document.createElement('div');
                     bgListContainer.className = 'bg_list';
                 
-                    // ### FIX START: Corrected protected background names ###
-                    const protectedBgs = ['_transparent', '_black', '_white'];
-                    // ### FIX END ###
-                
                     const systemBgs = document.querySelectorAll('#bg_menu_content .bg_example');
                     const customBgs = document.querySelectorAll('#bg_custom_content .bg_example');
                 
-                    const allBgs = [...systemBgs, ...customBgs];
-                
-                    if (allBgs.length === 0) {
+                    if (systemBgs.length === 0 && customBgs.length === 0) {
                         contentWrapper.innerHTML = '没有找到背景图。';
                         return;
                     }
-                
-                    allBgs.forEach(bg => {
-                        const bgFile = bg.getAttribute('bgfile');
-                        if (bg.querySelector('.add_bg_but') || bg.classList.contains('add_bg_but') || protectedBgs.includes(bgFile)) return;
-                
+
+                    // Render system backgrounds without checkboxes
+                    systemBgs.forEach(bg => {
+                        if (bg.querySelector('.add_bg_but') || bg.classList.contains('add_bg_but')) return;
                         const clone = bg.cloneNode(true);
+                        bgListContainer.appendChild(clone);
+                    });
+
+                    // Render custom backgrounds with checkboxes for deletion
+                    customBgs.forEach(bg => {
+                        const bgFile = bg.getAttribute('bgfile');
+                        const clone = bg.cloneNode(true);
+                        
                         const checkbox = document.createElement('input');
                         checkbox.type = 'checkbox';
                         checkbox.className = 'bg-select-checkbox';
@@ -290,6 +286,7 @@
                     contentWrapper.scrollTop = scrollTop;
                     batchDeleteBgBtn.disabled = selectedBackgrounds.size === 0;
                 }
+                // ### FIX END ###
 
                 async function buildThemeUI() {
                     const scrollTop = contentWrapper.scrollTop;
@@ -327,7 +324,7 @@
                             sortedCategories.push('未分类');
                         }
 
-                        const collapsedFolders = new Set(JSON.parse(localStorage.getItem(COLLAPSED_FOLDERS_KEY)) || []);
+                        const collapsedFolders = new Set(JSON.parse(localStorage.getItem(COLLAPSED_FOLD_KEY)) || []);
 
                         sortedCategories.forEach(category => {
                             const themesInCategory = (category === '⭐ 收藏夹') ? allParsedThemes.filter(t => favorites.includes(t.value)) : allParsedThemes.filter(t => t.tags.includes(category));
@@ -634,7 +631,7 @@
                 });
 
                 expandAllBtn.addEventListener('click', () => {
-                    localStorage.setItem(COLLAPSED_FOLDERS_KEY, JSON.stringify([]));
+                    localStorage.setItem(COLLAPSED_FOLD_KEY, JSON.stringify([]));
                     buildThemeUI();
                 });
                 
@@ -642,7 +639,7 @@
                     const allFolderNames = Array.from(contentWrapper.querySelectorAll('.theme-category'))
                         .map(div => div.dataset.categoryName)
                         .filter(name => name);
-                    localStorage.setItem(COLLAPSED_FOLDERS_KEY, JSON.stringify(allFolderNames));
+                    localStorage.setItem(COLLAPSED_FOLD_KEY, JSON.stringify(allFolderNames));
                     buildThemeUI();
                 });
 
@@ -716,7 +713,6 @@
                     
                     showRefreshNotification();
 
-                    // ### FIX START: Implement UI stay logic after import ###
                     document.querySelector('#site_logo').click();
                     setTimeout(() => {
                         document.querySelector('#site_logo').click();
@@ -730,7 +726,6 @@
                             }
                         }, 150);
                     }, 500);
-                    // ### FIX END ###
                 
                     event.target.value = '';
                 });
@@ -930,7 +925,7 @@
                                 list.style.display = isHidden ? 'block' : 'none';
                                 
                                 const categoryName = categoryTitle.parentElement.dataset.categoryName;
-                                let collapsedFolders = JSON.parse(localStorage.getItem(COLLAPSED_FOLDERS_KEY)) || [];
+                                let collapsedFolders = JSON.parse(localStorage.getItem(COLLAPSED_FOLD_KEY)) || [];
                                 if (!isHidden) {
                                     if (!collapsedFolders.includes(categoryName)) {
                                         collapsedFolders.push(categoryName);
@@ -938,7 +933,7 @@
                                 } else {
                                     collapsedFolders = collapsedFolders.filter(name => name !== categoryName);
                                 }
-                                localStorage.setItem(COLLAPSED_FOLDERS_KEY, JSON.stringify(collapsedFolders));
+                                localStorage.setItem(COLLAPSED_FOLD_KEY, JSON.stringify(collapsedFolders));
                             }
                         }
                         return;
