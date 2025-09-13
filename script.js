@@ -139,7 +139,6 @@
                 // ### FIX END ###
                 originalContainer.prepend(managerPanel);
                 
-                // ... (The rest of the variable declarations remain unchanged) ...
                 const nativeButtonsContainer = managerPanel.querySelector('#native-buttons-container');
                 nativeButtonsContainer.appendChild(updateButton);
                 nativeButtonsContainer.appendChild(saveAsButton);
@@ -237,8 +236,10 @@
                 
                     const bgListContainer = document.createElement('div');
                     bgListContainer.className = 'bg_list';
-
+                
+                    // ### FIX START: Corrected protected background names ###
                     const protectedBgs = ['_transparent', '_black', '_white'];
+                    // ### FIX END ###
                 
                     const systemBgs = document.querySelectorAll('#bg_menu_content .bg_example');
                     const customBgs = document.querySelectorAll('#bg_custom_content .bg_example');
@@ -290,7 +291,6 @@
                     batchDeleteBgBtn.disabled = selectedBackgrounds.size === 0;
                 }
 
-                // ... (buildThemeUI and the other theme-related functions remain unchanged) ...
                 async function buildThemeUI() {
                     const scrollTop = contentWrapper.scrollTop;
                     contentWrapper.innerHTML = '正在加载主题...';
@@ -714,18 +714,23 @@
                         toastr.success(message);
                     }
                     
-                    // ### FIX START: Trigger refresh notification on background import ###
                     showRefreshNotification();
-                    // ### FIX END ###
 
-                    // Refresh the background list in the UI without a full page reload
+                    // ### FIX START: Implement UI stay logic after import ###
                     document.querySelector('#site_logo').click();
                     setTimeout(() => {
                         document.querySelector('#site_logo').click();
-                        if (isManageBgMode) {
-                            setTimeout(() => renderBackgroundManagerUI(), 100); // Add a small delay for DOM to update
-                        }
+                        setTimeout(() => {
+                            if (isManageBgMode) {
+                                renderBackgroundManagerUI();
+                            }
+                            const userSettingsPanel = document.querySelector('#user-settings-block');
+                            if (userSettingsPanel && userSettingsPanel.classList.contains('closedDrawer')) {
+                                document.querySelector('#user-settings-button .drawer-toggle').click();
+                            }
+                        }, 150);
                     }, 500);
+                    // ### FIX END ###
                 
                     event.target.value = '';
                 });
@@ -779,7 +784,6 @@
                     }, 500);
                 });
                 
-                // ... (The rest of the event listeners and functions remain unchanged) ...
                 document.querySelector('#batch-add-tag-btn').addEventListener('click', async () => {
                     if (selectedForBatch.size === 0) { toastr.info('请先选择至少一个主题。'); return; }
                     const newTag = prompt('请输入要添加的新标签（文件夹名）：');
