@@ -51,7 +51,11 @@
                 async function getAllThemesFromAPI() { return (await apiRequest('settings/get', 'POST', {})).themes || []; }
                 async function deleteTheme(themeName) { await apiRequest('themes/delete', 'POST', { name: themeName }); }
                 async function saveTheme(themeObject) { await apiRequest('themes/save', 'POST', themeObject); }
-                async function deleteBackground(bgFile) { await apiRequest('backgrounds/delete', 'POST', { name: bgFile }); }
+                
+                // ### FIX START: Corrected the key in the JSON body from 'name' to 'file' ###
+                async function deleteBackground(bgFile) { await apiRequest('backgrounds/delete', 'POST', { file: bgFile }); }
+                // ### FIX END ###
+
                 async function uploadBackground(formData) {
                     const headers = getRequestHeaders();
                     delete headers['Content-Type'];
@@ -95,6 +99,7 @@
 
                 const managerPanel = document.createElement('div');
                 managerPanel.id = 'theme-manager-panel';
+                // ### FIX START: Polished and generalized the refresh notification text ###
                 managerPanel.innerHTML = `
                     <div id="theme-manager-header">
                         <h4>🎨 主题美化管理</h4>
@@ -103,7 +108,7 @@
                     </div>
                     <div id="theme-manager-content">
                         <div id="theme-manager-refresh-notice" style="display:none; margin: 10px 0; padding: 10px; background-color: rgba(255, 193, 7, 0.15); border: 1px solid #ffc107; border-radius: 5px; text-align: center; color: var(--main-text-color);">
-                            💡 <b>提示：</b>检测到主题文件变更。为确保所有更改完全生效，请在完成所有操作后
+                            💡 <b>提示：</b>检测到文件变更（主题或背景图）。为确保所有更改完全生效，请在完成所有操作后
                             <a id="theme-manager-refresh-page-btn" style="color:var(--primary-color, #007bff); text-decoration:underline; cursor:pointer; font-weight:bold;">刷新页面</a>。
                         </div>
                         <div class="theme-manager-actions" data-mode="theme">
@@ -131,8 +136,10 @@
                         </div>
                         <div class="theme-content"></div>
                     </div>`;
+                // ### FIX END ###
                 originalContainer.prepend(managerPanel);
-
+                
+                // ... (The rest of the variable declarations remain unchanged) ...
                 const nativeButtonsContainer = managerPanel.querySelector('#native-buttons-container');
                 nativeButtonsContainer.appendChild(updateButton);
                 nativeButtonsContainer.appendChild(saveAsButton);
@@ -230,10 +237,8 @@
                 
                     const bgListContainer = document.createElement('div');
                     bgListContainer.className = 'bg_list';
-                
-                    // ### FIX START: Corrected protected background names ###
+
                     const protectedBgs = ['_transparent', '_black', '_white'];
-                    // ### FIX END ###
                 
                     const systemBgs = document.querySelectorAll('#bg_menu_content .bg_example');
                     const customBgs = document.querySelectorAll('#bg_custom_content .bg_example');
@@ -285,6 +290,7 @@
                     batchDeleteBgBtn.disabled = selectedBackgrounds.size === 0;
                 }
 
+                // ... (buildThemeUI and the other theme-related functions remain unchanged) ...
                 async function buildThemeUI() {
                     const scrollTop = contentWrapper.scrollTop;
                     contentWrapper.innerHTML = '正在加载主题...';
@@ -532,6 +538,7 @@
                     buildThemeUI();
                 }
 
+
                 header.addEventListener('click', (e) => {
                     if (e.target.closest('#native-buttons-container')) return;
                     setCollapsed(content.style.maxHeight !== '0px', true);
@@ -609,15 +616,12 @@
                     manageBgsBtn.classList.toggle('selected', isManageBgMode);
                     manageBgsBtn.textContent = isManageBgMode ? '完成管理' : '🖼️ 管理背景';
                 
-                    // ### FIX START: Improved visibility logic for action bars ###
                     managerPanel.querySelector('[data-mode="theme"]').style.display = isManageBgMode ? 'none' : 'flex';
                     backgroundActionsBar.style.display = isManageBgMode ? 'flex' : 'none';
                     
-                    const sharedActions = managerPanel.querySelector('[data-mode="shared"]');
                     reorderModeBtn.style.display = isManageBgMode ? 'none' : 'inline-block';
                     expandAllBtn.style.display = isManageBgMode ? 'none' : 'inline-block';
                     collapseAllBtn.style.display = isManageBgMode ? 'none' : 'inline-block';
-                    // ### FIX END ###
                 
                     if (isManageBgMode) {
                         if (isBatchEditMode) batchEditBtn.click();
@@ -669,11 +673,8 @@
                     }
 
                     hideLoader();
-                    toastr.success(`批量导入完成！成功 ${successCount} 个，失败 ${errorCount} 个。正在刷新页面以应用更改...`);
-                    
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1500);
+                    toastr.success(`批量导入完成！成功 ${successCount} 个，失败 ${errorCount} 个。`);
+                    showRefreshNotification();
                     
                     event.target.value = ''; 
                 });
@@ -693,9 +694,7 @@
                     for (const file of files) {
                         try {
                             const formData = new FormData();
-                            // ### FIX START: Use 'avatar' as the key for the uploaded file ###
                             formData.append('avatar', file);
-                            // ### FIX END ###
                             await uploadBackground(formData);
                             successCount++;
                         } catch (err) {
@@ -715,11 +714,16 @@
                         toastr.success(message);
                     }
                     
+                    // ### FIX START: Trigger refresh notification on background import ###
+                    showRefreshNotification();
+                    // ### FIX END ###
+
+                    // Refresh the background list in the UI without a full page reload
                     document.querySelector('#site_logo').click();
                     setTimeout(() => {
                         document.querySelector('#site_logo').click();
                         if (isManageBgMode) {
-                            renderBackgroundManagerUI();
+                            setTimeout(() => renderBackgroundManagerUI(), 100); // Add a small delay for DOM to update
                         }
                     }, 500);
                 
@@ -770,11 +774,12 @@
                     setTimeout(() => {
                         document.querySelector('#site_logo').click();
                         if (isManageBgMode) {
-                            renderBackgroundManagerUI();
+                            setTimeout(() => renderBackgroundManagerUI(), 100);
                         }
                     }, 500);
                 });
-
+                
+                // ... (The rest of the event listeners and functions remain unchanged) ...
                 document.querySelector('#batch-add-tag-btn').addEventListener('click', async () => {
                     if (selectedForBatch.size === 0) { toastr.info('请先选择至少一个主题。'); return; }
                     const newTag = prompt('请输入要添加的新标签（文件夹名）：');
