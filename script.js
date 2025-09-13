@@ -17,10 +17,11 @@
                 const CATEGORY_ORDER_KEY = 'themeManager_categoryOrder';
                 const COLLAPSED_FOLDERS_KEY = 'themeManager_collapsedFolders';
 
-                let openCategoriesAfterRefresh = new Set();
+                // 【代码清理】移除了不再需要的 openCategoriesAfterRefresh 变量
                 let allParsedThemes = [];
                 let refreshNeeded = false;
                 let isReorderMode = false;
+                let isManageBgMode = false; // 【新功能】背景管理模式的状态旗帜
 
                 async function apiRequest(endpoint, method = 'POST', body = {}) {
                     try {
@@ -46,6 +47,14 @@
                 async function getAllThemesFromAPI() { return (await apiRequest('settings/get', 'POST', {})).themes || []; }
                 async function deleteTheme(themeName) { await apiRequest('themes/delete', 'POST', { name: themeName }); }
                 async function saveTheme(themeObject) { await apiRequest('themes/save', 'POST', themeObject); }
+                // 【新功能】添加背景图相关的API函数
+                async function deleteBackground(bgFile) { await apiRequest('backgrounds/delete', 'POST', { name: bgFile }); }
+                async function uploadBackground(formData) {
+                    const headers = getRequestHeaders();
+                    delete headers['Content-Type']; // FormData 会自动设置正确的 Content-Type
+                    await fetch('/api/backgrounds/upload', { method: 'POST', headers, body: formData });
+                }
+
                 function manualUpdateOriginalSelect(action, oldName, newName) {
                     const originalSelect = document.querySelector('#themes');
                     if (!originalSelect) return;
@@ -73,23 +82,13 @@
                     return tags;
                 }
 
-                function getCategoriesForThemes(themeNamesSet) {
-                    const categories = new Set();
-                    themeNamesSet.forEach(themeName => {
-                        const theme = allParsedThemes.find(t => t.value === themeName);
-                        if (theme) {
-                            theme.tags.forEach(tag => categories.add(tag));
-                        }
-                    });
-                    return categories;
-                }
-
                 const originalContainer = originalSelect.parentElement;
                 if (!originalContainer) return;
                 originalSelect.style.display = 'none';
 
                 const managerPanel = document.createElement('div');
                 managerPanel.id = 'theme-manager-panel';
+                // 【新功能】添加背景管理相关的UI元素
                 managerPanel.innerHTML = `
                     <div id="theme-manager-header">
                         <h4>🎨 主题美化管理</h4>
@@ -104,13 +103,20 @@
                         <div class="theme-manager-actions">
                             <input type="search" id="theme-search-box" placeholder="🔍 搜索主题...">
                             <button id="random-theme-btn" title="随机应用一个主题">🎲 随机</button>
-                            <button id="reorder-mode-btn" title="调整文件夹顺序">🔄 调整顺序</button>
                             <button id="batch-edit-btn" title="进入/退出批量编辑模式">🔧 批量编辑</button>
                             <button id="batch-import-btn" title="从文件批量导入主题">📂 批量导入</button>
                         </div>
                         <div class="theme-manager-actions">
+                            <button id="reorder-mode-btn" title="调整文件夹顺序">🔄 调整顺序</button>
                             <button id="expand-all-btn" title="展开所有文件夹">全部展开</button>
                             <button id="collapse-all-btn" title="折叠所有文件夹">全部折叠</button>
+                        </div>
+                        <div class="theme-manager-actions">
+                             <button id="manage-bgs-btn" title="管理背景图">🖼️ 管理背景</button>
+                        </div>
+                        <div id="background-actions-bar" style="display:none;">
+                            <button id="batch-import-bg-btn">➕ 批量导入背景</button>
+                            <button id="batch-delete-bg-btn">🗑️ 删除选中背景</button>
                         </div>
                         <div id="batch-actions-bar">
                             <button id="batch-add-tag-btn">➕ 添加标签</button>
@@ -140,6 +146,11 @@
                 const expandAllBtn = managerPanel.querySelector('#expand-all-btn');
                 const collapseAllBtn = managerPanel.querySelector('#collapse-all-btn');
                 
+                const manageBgsBtn = managerPanel.querySelector('#manage-bgs-btn');
+                const backgroundActionsBar = managerPanel.querySelector('#background-actions-bar');
+                const batchImportBgBtn = managerPanel.querySelector('#batch-import-bg-btn');
+                const batchDeleteBgBtn = managerPanel.querySelector('#batch-delete-bg-btn');
+
                 const refreshNotice = managerPanel.querySelector('#theme-manager-refresh-notice');
                 const refreshBtn = managerPanel.querySelector('#theme-manager-refresh-page-btn');
                 refreshBtn.addEventListener('click', () => location.reload());
@@ -157,6 +168,14 @@
                 fileInput.accept = '.json';
                 fileInput.style.display = 'none';
                 document.body.appendChild(fileInput);
+
+                // 【新功能】为背景图创建单独的文件输入框
+                const bgFileInput = document.createElement('input');
+                bgFileInput.type = 'file';
+                bgFileInput.multiple = true;
+                bgFileInput.accept = 'image/*,video/*';
+                bgFileInput.style.display = 'none';
+                document.body.appendChild(bgFileInput);
 
                 let favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY)) || [];
                 let allThemeObjects = [];
@@ -240,6 +259,7 @@
 
                         const collapsedFolders = new Set(JSON.parse(localStorage.getItem(COLLAPSED_FOLDERS_KEY)) || []);
 
+
                         sortedCategories.forEach(category => {
                             const themesInCategory = (category === '⭐ 收藏夹') ? allParsedThemes.filter(t => favorites.includes(t.value)) : allParsedThemes.filter(t => t.tags.includes(category));
                             if (themesInCategory.length === 0 && category !== '未分类' && category !== '⭐ 收藏夹') return;
@@ -276,11 +296,8 @@
                             const list = document.createElement('ul');
                             list.className = 'theme-list';
                             
-                            if (openCategoriesAfterRefresh.size > 0) {
-                                list.style.display = openCategoriesAfterRefresh.has(category) ? 'block' : 'none';
-                            } else {
-                                list.style.display = collapsedFolders.has(category) ? 'none' : 'block';
-                            }
+                            // 总是使用localStorage中的记忆状态
+                            list.style.display = collapsedFolders.has(category) ? 'none' : 'block';
 
                             themesInCategory.forEach(theme => {
                                 const item = document.createElement('li');
@@ -288,9 +305,13 @@
                                 item.dataset.value = theme.value;
                                 const isFavorited = favorites.includes(theme.value);
                                 const starCharacter = isFavorited ? '★' : '☆';
+                                const themeObject = allThemeObjects.find(t => t.name === theme.value);
+                                const isLinked = themeObject && themeObject.backgroundFile;
+
                                 item.innerHTML = `
                                     <span class="theme-item-name">${theme.display}</span>
                                     <div class="theme-item-buttons">
+                                        <button class="link-bg-btn ${isLinked ? 'linked' : ''}" title="关联背景图">🔗</button>
                                         <button class="favorite-btn" title="收藏">${starCharacter}</button>
                                         <button class="rename-btn" title="重命名">✏️</button>
                                         <button class="delete-btn" title="删除">🗑️</button>
@@ -305,11 +326,9 @@
                         
                         contentWrapper.scrollTop = scrollTop;
                         updateActiveState();
-                        openCategoriesAfterRefresh.clear();
 
                     } catch (err) {
                         contentWrapper.innerHTML = '加载主题失败，请检查浏览器控制台获取更多信息。';
-                        openCategoriesAfterRefresh.clear();
                     }
                 }
 
@@ -328,12 +347,6 @@
                     let errorCount = 0;
                     let skippedCount = 0;
                     const currentThemes = await getAllThemesFromAPI();
-
-                    openCategoriesAfterRefresh.clear();
-                    getCategoriesForThemes(selectedForBatch).forEach(cat => openCategoriesAfterRefresh.add(cat));
-                    const sampleOldName = Array.from(selectedForBatch)[0];
-                    const sampleNewName = renameLogic(sampleOldName);
-                    getTagsFromThemeName(sampleNewName).forEach(tag => openCategoriesAfterRefresh.add(tag));
 
                     for (const oldName of selectedForBatch) {
                         try {
@@ -380,9 +393,6 @@
                 async function performBatchDelete() {
                     if (selectedForBatch.size === 0) { toastr.info('请先选择至少一个主题。'); return; }
                     if (!confirm(`确定要删除选中的 ${selectedForBatch.size} 个主题吗？`)) return;
-                    
-                    openCategoriesAfterRefresh.clear();
-                    getCategoriesForThemes(selectedForBatch).forEach(cat => openCategoriesAfterRefresh.add(cat));
 
                     showLoader();
                     for (const themeName of selectedForBatch) {
@@ -412,9 +422,7 @@
                     let errorCount = 0;
                     const themesToProcess = new Map();
 
-                    openCategoriesAfterRefresh.clear();
                     selectedFoldersForBatch.forEach(folderName => {
-                        openCategoriesAfterRefresh.add(folderName);
                         allParsedThemes.forEach(theme => {
                             if (theme.tags.includes(folderName)) {
                                 const newName = theme.value.replace(`[${folderName}]`, '').trim();
@@ -422,7 +430,6 @@
                             }
                         });
                     });
-                    openCategoriesAfterRefresh.add('未分类');
 
                     for (const [oldName, newName] of themesToProcess.entries()) {
                         try {
@@ -453,12 +460,10 @@
                     setCollapsed(content.style.maxHeight !== '0px', true);
                 });
 
-                // 【核心修复】增强搜索逻辑
                 searchBox.addEventListener('input', (e) => {
                     const searchTerm = e.target.value.toLowerCase();
                     const categories = managerPanel.querySelectorAll('.theme-category');
                     
-                    // 如果搜索框不为空，则先折叠所有文件夹
                     if (searchTerm) {
                         categories.forEach(category => {
                             const list = category.querySelector('.theme-list');
@@ -470,7 +475,6 @@
                         const isVisible = item.querySelector('.theme-item-name').textContent.toLowerCase().includes(searchTerm);
                         item.style.display = isVisible ? 'flex' : 'none';
 
-                        // 如果主题可见，则展开其父文件夹
                         if (isVisible && searchTerm) {
                             const parentCategory = item.closest('.theme-category');
                             if (parentCategory) {
@@ -480,7 +484,6 @@
                         }
                     });
 
-                    // 如果搜索框为空，则恢复到记忆中的折叠状态
                     if (!searchTerm) {
                         buildThemeUI();
                     }
@@ -532,7 +535,6 @@
                 });
                 
                 collapseAllBtn.addEventListener('click', () => {
-                    // 【核心修复】折叠所有分类，包括特殊分类
                     const allFolderNames = Array.from(contentWrapper.querySelectorAll('.theme-category'))
                         .map(div => div.dataset.categoryName)
                         .filter(name => name);
@@ -647,10 +649,6 @@
                             const newFolderName = prompt('请输入新的文件夹名称:', oldFolderName);
 
                             if (newFolderName && newFolderName.trim() && newFolderName !== oldFolderName) {
-                                
-                                openCategoriesAfterRefresh.clear();
-                                openCategoriesAfterRefresh.add(newFolderName.trim());
-
                                 showLoader();
                                 const themesToRename = allParsedThemes.filter(t => t.tags.includes(oldFolderName));
                                 for (const theme of themesToRename) {
@@ -698,10 +696,6 @@
                             const categoryName = categoryTitle.closest('.theme-category').dataset.categoryName;
                             if (!confirm(`确定要解散文件夹 "${categoryName}" 吗？`)) return;
                             
-                            openCategoriesAfterRefresh.clear();
-                            openCategoriesAfterRefresh.add(categoryName);
-                            openCategoriesAfterRefresh.add('未分类');
-
                             showLoader();
                             const themesToUpdate = Array.from(originalSelect.options).map(opt => opt.value).filter(name => name.includes(`[${categoryName}]`));
                             for (const oldName of themesToUpdate) {
@@ -753,10 +747,6 @@
                         const categoryName = themeItem.closest('.theme-category').dataset.categoryName;
 
                         if (button && button.classList.contains('favorite-btn')) {
-                            openCategoriesAfterRefresh.clear();
-                            openCategoriesAfterRefresh.add(categoryName);
-                            openCategoriesAfterRefresh.add('⭐ 收藏夹');
-
                             if (favorites.includes(themeName)) {
                                 favorites = favorites.filter(f => f !== themeName);
                                 button.textContent = '☆';
@@ -771,23 +761,17 @@
                             const oldName = themeName;
                             const newName = prompt(`请输入新名称：`, oldName);
                             if (newName && newName !== oldName) {
-                                openCategoriesAfterRefresh.clear();
-                                openCategoriesAfterRefresh.add(categoryName);
-                                getTagsFromThemeName(newName).forEach(tag => openCategoriesAfterRefresh.add(tag));
-
                                 const themeObject = allThemeObjects.find(t => t.name === oldName);
                                 if (!themeObject) return;
                                 await saveTheme({ ...themeObject, name: newName });
                                 await deleteTheme(oldName);
                                 manualUpdateOriginalSelect('rename', oldName, newName);
                                 showRefreshNotification();
+                                await buildThemeUI();
                             }
                         }
                         else if (button && button.classList.contains('delete-btn')) {
                             if (confirm(`确定要删除主题 "${themeItem.querySelector('.theme-item-name').textContent}" 吗？`)) {
-                                openCategoriesAfterRefresh.clear();
-                                openCategoriesAfterRefresh.add(categoryName);
-
                                 const isCurrentlyActive = originalSelect.value === themeName;
                                 await deleteTheme(themeName);
                                 manualUpdateOriginalSelect('delete', themeName);
@@ -797,27 +781,32 @@
                                     originalSelect.dispatchEvent(new Event('change'));
                                 }
                                 showRefreshNotification();
+                                await buildThemeUI();
                             }
                         } else {
                             originalSelect.value = themeName;
                             originalSelect.dispatchEvent(new Event('change'));
+                            const themeObject = allThemeObjects.find(t => t.name === themeName);
+                            if (themeObject && themeObject.backgroundFile) {
+                                const bgToSelect = document.querySelector(`#bg_menu_content .bg_example[bgfile="${themeObject.backgroundFile}"]`);
+                                if (bgToSelect) {
+                                    bgToSelect.click();
+                                }
+                            }
                         }
                     }
                 });
                 originalSelect.addEventListener('change', updateActiveState);
 
                 const observer = new MutationObserver((mutations) => {
-                    openCategoriesAfterRefresh.clear();
                     for (let mutation of mutations) {
-                        if (mutation.type === 'childList' && (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0)) {
-                            const addedNode = mutation.addedNodes[0];
-                            if (addedNode && addedNode.tagName === 'OPTION' && addedNode.value) {
-                                toastr.success(`已另存为新主题: "${addedNode.value}"`);
-                                getTagsFromThemeName(addedNode.value).forEach(tag => openCategoriesAfterRefresh.add(tag));
+                        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                            const newNode = mutation.addedNodes[0];
+                            if (newNode.tagName === 'OPTION' && newNode.value) {
+                                toastr.success(`已另存为新主题: "${newNode.value}"`);
                                 showRefreshNotification();
+                                break;
                             }
-                            buildThemeUI(); 
-                            return; 
                         }
                     }
                     buildThemeUI();
