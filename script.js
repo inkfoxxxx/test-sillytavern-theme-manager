@@ -25,20 +25,16 @@
                 let isBindingMode = false;
                 let themeNameToBind = null;
                 let selectedBackgrounds = new Set();
-                let originalBgParent = null;
 
                 async function apiRequest(endpoint, method = 'POST', body = {}) {
+                    // This is a generic function for JSON APIs, not suitable for FormData.
                     try {
                         const headers = getRequestHeaders();
-                        const options = { method, headers };
-                        if (method.toUpperCase() !== 'GET' && method.toUpperCase() !== 'HEAD') {
-                            options.body = JSON.stringify(body);
-                        }
+                        const options = { method, headers, body: JSON.stringify(body) };
                         const response = await fetch(`/api/${endpoint}`, options);
                         const responseText = await response.text();
                         if (!response.ok) {
-                            try { const errorData = JSON.parse(responseText); throw new Error(errorData.error || `HTTP error! status: ${response.status}`); }
-                            catch (e) { throw new Error(responseText || `HTTP error! status: ${response.status}`); }
+                            throw new Error(responseText || `HTTP error! status: ${response.status}`);
                         }
                         if (responseText.trim().toUpperCase() === 'OK') return { status: 'OK' };
                         return responseText ? JSON.parse(responseText) : {};
@@ -48,17 +44,17 @@
                         throw error;
                     }
                 }
+
                 async function getAllThemesFromAPI() { return (await apiRequest('settings/get', 'POST', {})).themes || []; }
                 async function deleteTheme(themeName) { await apiRequest('themes/delete', 'POST', { name: themeName }); }
                 async function saveTheme(themeObject) { await apiRequest('themes/save', 'POST', themeObject); }
 
-                // ### FIX START: Re-implement deleteBackground to use FormData, matching SillyTavern's server expectation ###
                 async function deleteBackground(bgFile) {
                     const formData = new FormData();
-                    formData.append('file', bgFile); // The server expects the key to be 'file'
+                    formData.append('file', bgFile);
                     
                     const headers = getRequestHeaders();
-                    delete headers['Content-Type']; // Let the browser set the correct multipart/form-data header
+                    delete headers['Content-Type'];
 
                     const response = await fetch('/api/backgrounds/delete', {
                         method: 'POST',
@@ -71,7 +67,6 @@
                         throw new Error(responseText || `HTTP error! status: ${response.status}`);
                     }
                 }
-                // ### FIX END ###
 
                 async function uploadBackground(formData) {
                     const headers = getRequestHeaders();
@@ -245,7 +240,6 @@
                     }
                 }
 
-                // ### FIX START: Differentiate between system and custom backgrounds for deletion capability ###
                 async function renderBackgroundManagerUI() {
                     const scrollTop = contentWrapper.scrollTop;
                     contentWrapper.innerHTML = '正在加载背景图...';
@@ -256,22 +250,19 @@
                     const systemBgs = document.querySelectorAll('#bg_menu_content .bg_example');
                     const customBgs = document.querySelectorAll('#bg_custom_content .bg_example');
                 
-                    if (systemBgs.length === 0 && customBgs.length === 0) {
+                    const allBgs = [...systemBgs, ...customBgs];
+                
+                    if (allBgs.length === 0) {
                         contentWrapper.innerHTML = '没有找到背景图。';
                         return;
                     }
                 
-                    // Render system backgrounds (non-deletable)
-                    systemBgs.forEach(bg => {
+                    allBgs.forEach(bg => {
+                        // Exclude only the functional "Add" button
                         if (bg.querySelector('.add_bg_but')) return;
-                        const clone = bg.cloneNode(true);
-                        bgListContainer.appendChild(clone);
-                    });
-                
-                    // Render custom backgrounds (deletable)
-                    customBgs.forEach(bg => {
+
                         const bgFile = bg.getAttribute('bgfile');
-                        if (!bgFile) return; 
+                        if (!bgFile) return;
                 
                         const clone = bg.cloneNode(true);
                         const checkbox = document.createElement('input');
@@ -308,10 +299,8 @@
                     contentWrapper.scrollTop = scrollTop;
                     batchDeleteBgBtn.disabled = selectedBackgrounds.size === 0;
                 }
-                // ### FIX END ###
 
                 async function buildThemeUI() {
-                    // ... (This function remains unchanged)
                     const scrollTop = contentWrapper.scrollTop;
                     contentWrapper.innerHTML = '正在加载主题...';
                     try {
@@ -840,7 +829,6 @@
                 document.querySelector('#batch-dissolve-btn').addEventListener('click', performBatchDissolve);
 
                 contentWrapper.addEventListener('click', async (event) => {
-                    // ... (This giant function remains unchanged)
                     const target = event.target;
                     const button = target.closest('button');
                     const themeItem = target.closest('.theme-item');
