@@ -48,21 +48,20 @@
                 async function deleteTheme(themeName) { await apiRequest('themes/delete', 'POST', { name: themeName }); }
                 async function saveTheme(themeObject) { await apiRequest('themes/save', 'POST', themeObject); }
 
-                // ### 最终解决方案 v3：使用 URL 查询参数 ###
+                // ### 最终解决方案 v4：使用正确的 FormData 键名 'avatar' ###
                 async function deleteBackground(bgFile) {
-                    // 1. 将文件名作为查询参数附加到 URL 上
-                    //    使用 encodeURIComponent 来确保特殊字符（如空格或中文）能被正确编码
-                    const url = `/api/backgrounds/delete?name=${encodeURIComponent(bgFile)}`;
+                    const formData = new FormData();
+                    // 关键修复：服务器期望的键名是 'avatar'，而不是 'name'
+                    formData.append('avatar', bgFile);
 
-                    // 2. 获取通用请求头。注意这次请求体为空。
                     const headers = getRequestHeaders();
+                    delete headers['Content-Type']; // 让浏览器自动设置 multipart/form-data 头
 
                     try {
-                        const response = await fetch(url, { // 使用新的带参数的URL
+                        const response = await fetch('/api/backgrounds/delete', {
                             method: 'POST',
                             headers: headers,
-                            // 3. body 必须为空，因为数据已经在URL里了
-                            body: null
+                            body: formData
                         });
 
                         if (!response.ok) {
