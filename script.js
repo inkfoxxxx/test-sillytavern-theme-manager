@@ -48,20 +48,20 @@
                 async function deleteTheme(themeName) { await apiRequest('themes/delete', 'POST', { name: themeName }); }
                 async function saveTheme(themeObject) { await apiRequest('themes/save', 'POST', themeObject); }
 
-                                // ### 最终解决方案 v6：使用正确的 FormData 键名 'avatar' ###
+                // ### 最终解决方案 v6：使用正确的 JSON 键名 'bg' ###
                 async function deleteBackground(bgFile) {
-                    const formData = new FormData();
-                    // 关键修复：服务器期望的键名是 'avatar'，而不是 'name' 或 'bg'
-                    formData.append('avatar', bgFile);
+                    // 构建一个包含文件名的JavaScript对象，使用正确的键名 'bg'
+                    const body = {
+                        bg: bgFile // 这就是那个折磨了我们很久的秘密
+                    };
 
                     const headers = getRequestHeaders();
-                    delete headers['Content-Type']; // 让浏览器自动设置 multipart/form-data 头
 
                     try {
                         const response = await fetch('/api/backgrounds/delete', {
                             method: 'POST',
                             headers: headers,
-                            body: formData
+                            body: JSON.stringify(body) // 将对象转换为JSON字符串
                         });
 
                         if (!response.ok) {
@@ -1111,4 +1111,5 @@
         }
     }, 250);
 })();
+
 
