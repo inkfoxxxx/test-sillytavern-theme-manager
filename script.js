@@ -7,7 +7,7 @@
         const saveAsButton = document.querySelector('#ui-preset-save-button');
 
         if (originalSelect && updateButton && saveAsButton && window.SillyTavern?.getContext && !document.querySelector('#theme-manager-panel')) {
-            console.log("Theme Manager (v21.1 Final Fix): 初始化...");
+            console.log("Theme Manager (v23.0 Final): 初始化...");
             clearInterval(initInterval);
 
             try {
@@ -17,11 +17,10 @@
                 const CATEGORY_ORDER_KEY = 'themeManager_categoryOrder';
                 const COLLAPSED_FOLDERS_KEY = 'themeManager_collapsedFolders';
 
-                // 【代码清理】移除了不再需要的 openCategoriesAfterRefresh 变量
                 let allParsedThemes = [];
                 let refreshNeeded = false;
                 let isReorderMode = false;
-                let isManageBgMode = false; // 【新功能】背景管理模式的状态旗帜
+                let isManageBgMode = false;
 
                 async function apiRequest(endpoint, method = 'POST', body = {}) {
                     try {
@@ -47,11 +46,10 @@
                 async function getAllThemesFromAPI() { return (await apiRequest('settings/get', 'POST', {})).themes || []; }
                 async function deleteTheme(themeName) { await apiRequest('themes/delete', 'POST', { name: themeName }); }
                 async function saveTheme(themeObject) { await apiRequest('themes/save', 'POST', themeObject); }
-                // 【新功能】添加背景图相关的API函数
                 async function deleteBackground(bgFile) { await apiRequest('backgrounds/delete', 'POST', { name: bgFile }); }
                 async function uploadBackground(formData) {
                     const headers = getRequestHeaders();
-                    delete headers['Content-Type']; // FormData 会自动设置正确的 Content-Type
+                    delete headers['Content-Type'];
                     await fetch('/api/backgrounds/upload', { method: 'POST', headers, body: formData });
                 }
 
@@ -81,14 +79,13 @@
                     if (tags.length === 0) tags.push('未分类');
                     return tags;
                 }
-
+                
                 const originalContainer = originalSelect.parentElement;
                 if (!originalContainer) return;
                 originalSelect.style.display = 'none';
 
                 const managerPanel = document.createElement('div');
                 managerPanel.id = 'theme-manager-panel';
-                // 【新功能】添加背景管理相关的UI元素
                 managerPanel.innerHTML = `
                     <div id="theme-manager-header">
                         <h4>🎨 主题美化管理</h4>
@@ -169,7 +166,6 @@
                 fileInput.style.display = 'none';
                 document.body.appendChild(fileInput);
 
-                // 【新功能】为背景图创建单独的文件输入框
                 const bgFileInput = document.createElement('input');
                 bgFileInput.type = 'file';
                 bgFileInput.multiple = true;
@@ -222,6 +218,10 @@
                 }
 
                 async function buildThemeUI() {
+                    isManageBgMode = false;
+                    managerPanel.classList.remove('manage-bg-mode');
+                    backgroundActionsBar.style.display = 'none';
+
                     const scrollTop = contentWrapper.scrollTop;
                     contentWrapper.innerHTML = '正在加载主题...';
                     try {
@@ -259,7 +259,6 @@
 
                         const collapsedFolders = new Set(JSON.parse(localStorage.getItem(COLLAPSED_FOLDERS_KEY)) || []);
 
-
                         sortedCategories.forEach(category => {
                             const themesInCategory = (category === '⭐ 收藏夹') ? allParsedThemes.filter(t => favorites.includes(t.value)) : allParsedThemes.filter(t => t.tags.includes(category));
                             if (themesInCategory.length === 0 && category !== '未分类' && category !== '⭐ 收藏夹') return;
@@ -296,7 +295,6 @@
                             const list = document.createElement('ul');
                             list.className = 'theme-list';
                             
-                            // 总是使用localStorage中的记忆状态
                             list.style.display = collapsedFolders.has(category) ? 'none' : 'block';
 
                             themesInCategory.forEach(theme => {
@@ -330,6 +328,34 @@
                     } catch (err) {
                         contentWrapper.innerHTML = '加载主题失败，请检查浏览器控制台获取更多信息。';
                     }
+                }
+                
+                async function buildBackgroundManagerUI() {
+                    isManageBgMode = true;
+                    managerPanel.classList.add('manage-bg-mode');
+                    backgroundActionsBar.style.display = 'flex';
+                    
+                    contentWrapper.innerHTML = '<div class="bg-grid"></div>';
+                    const bgGrid = contentWrapper.querySelector('.bg-grid');
+                    
+                    const systemBgs = Array.from(document.querySelectorAll('#bg_menu_content .bg_example'));
+                    const chatBgs = Array.from(document.querySelectorAll('#bg_custom_content .bg_example'));
+
+                    [...systemBgs, ...chatBgs].forEach(bgNode => {
+                        if (!bgNode.getAttribute('bgfile')) return; // Skip the upload button
+                        
+                        const bgItem = document.createElement('div');
+                        bgItem.className = 'bg-item';
+                        bgItem.dataset.bgfile = bgNode.getAttribute('bgfile');
+                        bgItem.style.backgroundImage = bgNode.style.backgroundImage;
+                        
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.className = 'bg-select-checkbox';
+                        bgItem.appendChild(checkbox);
+                        
+                        bgGrid.appendChild(bgItem);
+                    });
                 }
 
                 function updateActiveState() {
@@ -744,8 +770,6 @@
                             themeItem.classList.add('selected-for-batch');
                         }
                     } else {
-                        const categoryName = themeItem.closest('.theme-category').dataset.categoryName;
-
                         if (button && button.classList.contains('favorite-btn')) {
                             if (favorites.includes(themeName)) {
                                 favorites = favorites.filter(f => f !== themeName);
@@ -786,13 +810,6 @@
                         } else {
                             originalSelect.value = themeName;
                             originalSelect.dispatchEvent(new Event('change'));
-                            const themeObject = allThemeObjects.find(t => t.name === themeName);
-                            if (themeObject && themeObject.backgroundFile) {
-                                const bgToSelect = document.querySelector(`#bg_menu_content .bg_example[bgfile="${themeObject.backgroundFile}"]`);
-                                if (bgToSelect) {
-                                    bgToSelect.click();
-                                }
-                            }
                         }
                     }
                 });
