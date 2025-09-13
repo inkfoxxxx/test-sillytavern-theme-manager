@@ -48,33 +48,35 @@
                 async function deleteTheme(themeName) { await apiRequest('themes/delete', 'POST', { name: themeName }); }
                 async function saveTheme(themeObject) { await apiRequest('themes/save', 'POST', themeObject); }
 
-                // ### FINAL FIX START: Use FormData with the correct key 'name' for background deletion ###
+                // ### 最终的正确修复：使用 JSON 格式发送删除请求 ###
                 async function deleteBackground(bgFile) {
-                    // 调试
-                    console.log('正在尝试删除的背景文件名:', bgFile);
-                    const formData = new FormData();
-                    formData.append('name', bgFile); // The server expects the key to be 'name' in FormData
-                    
-                    const headers = getRequestHeaders();
-                    delete headers['Content-Type']; // Let browser set the multipart/form-data boundary
-                try {
-                    const response = await fetch('/api/backgrounds/delete', {
-                        method: 'POST',
-                        headers: headers,
-                        body: formData,
-                    });
+                    // 直接构建一个包含文件名的简单JavaScript对象
+                    const body = {
+                        name: bgFile
+                    };
 
-                    if (!response.ok) {
-                        const responseText = await response.text();
-                        throw new Error(responseText || `HTTP error! status: ${response.status}`);
+                    // 获取通用请求头，这次我们保留 'Content-Type': 'application/json'
+                    const headers = getRequestHeaders();
+
+                    try {
+                        const response = await fetch('/api/backgrounds/delete', {
+                            method: 'POST',
+                            headers: headers,
+                            // 将JavaScript对象转换为JSON字符串作为请求体
+                            body: JSON.stringify(body)
+                        });
+
+                        if (!response.ok) {
+                            const responseText = await response.text();
+                            throw new Error(responseText || `HTTP error! status: ${response.status}`);
+                        }
+                    } catch (error) {
+                        console.error(`删除背景 "${bgFile}" 时出错:`, error);
+                        // 将错误再次抛出，以便外层可以捕获并显示给用户
+                        throw error;
                     }
-                } catch (error) {
-                    console.error(`删除背景 "${bgFile}" 时出错:`, error);
-                    // 将错误再次抛出，以便外层可以捕获并显示给用户
-                    throw error;
                 }
-            }
-                // ### FINAL FIX END ###
+                // ### 修复结束 ###
 
                 async function uploadBackground(formData) {
                     const headers = getRequestHeaders();
