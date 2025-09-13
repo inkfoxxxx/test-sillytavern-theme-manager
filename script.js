@@ -27,6 +27,7 @@
                 let selectedBackgrounds = new Set();
                 let originalBgParent = null;
 
+                // ### FIX START: 改进了API请求的错误处理 ###
                 async function apiRequest(endpoint, method = 'POST', body = {}) {
                     try {
                         const headers = getRequestHeaders();
@@ -37,28 +38,44 @@
                         const response = await fetch(`/api/${endpoint}`, options);
                         const responseText = await response.text();
                         if (!response.ok) {
-                            try { const errorData = JSON.parse(responseText); throw new Error(errorData.error || `HTTP error! status: ${response.status}`); }
-                            catch (e) { throw new Error(responseText || `HTTP error! status: ${response.status}`); }
+                            // 检查响应是否为JSON，如果不是，直接抛出文本内容
+                            try {
+                                const errorData = JSON.parse(responseText);
+                                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                            } catch (e) {
+                                // 如果解析JSON失败，说明返回的不是JSON（比如HTML错误页），直接抛出原始文本
+                                throw new Error(responseText.trim() || `HTTP error! status: ${response.status}`);
+                            }
                         }
                         if (responseText.trim().toUpperCase() === 'OK') return { status: 'OK' };
                         return responseText ? JSON.parse(responseText) : {};
                     } catch (error) {
                         console.error(`API request to /api/${endpoint} failed:`, error);
-                        toastr.error(`API请求失败: ${error.message}`);
+                        // 清理HTML标签，让错误提示更易读
+                        const errorMessage = error.message.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+                        toastr.error(`API请求失败: ${errorMessage}`);
                         throw error;
                     }
                 }
+                // ### FIX END ###
+
                 async function getAllThemesFromAPI() { return (await apiRequest('settings/get', 'POST', {})).themes || []; }
                 async function deleteTheme(themeName) { await apiRequest('themes/delete', 'POST', { name: themeName }); }
                 async function saveTheme(themeObject) { await apiRequest('themes/save', 'POST', themeObject); }
                 async function deleteBackground(bgFile) { await apiRequest('backgrounds/delete', 'POST', { name: bgFile }); }
+
+                // ### FIX START: 改进了上传背景的错误处理 ###
                 async function uploadBackground(formData) {
                     const headers = getRequestHeaders();
                     delete headers['Content-Type'];
-                    // ### FIX START: Use 'avatar' as the field name for the file ###
-                    await fetch('/api/backgrounds/upload', { method: 'POST', headers, body: formData });
-                    // ### FIX END ###
+                    const response = await fetch('/api/backgrounds/upload', { method: 'POST', headers, body: formData });
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(errorText || `Upload failed with status: ${response.status}`);
+                    }
                 }
+                // ### FIX END ###
+
 
                 function manualUpdateOriginalSelect(action, oldName, newName) {
                     const originalSelect = document.querySelector('#themes');
@@ -229,21 +246,27 @@
                     const bgListContainer = document.createElement('div');
                     bgListContainer.className = 'bg_list';
                 
-                    // ### FIX START: Only select CUSTOM backgrounds for management ###
+                    const systemBgs = document.querySelectorAll('#bg_menu_content .bg_example');
                     const customBgs = document.querySelectorAll('#bg_custom_content .bg_example');
+                
+                    const allBgs = [...systemBgs, ...customBgs];
+                    // ### FIX START: 添加了保护列表 ###
+                    const protectedBgs = ['_transparent.png', '_black.png', '_white.png'];
                     // ### FIX END ###
                 
-                    if (customBgs.length === 0) {
-                        contentWrapper.innerHTML = '没有可管理的自定义背景图。';
+                    if (allBgs.length === 0) {
+                        contentWrapper.innerHTML = '没有找到背景图。';
                         return;
                     }
                 
-                    customBgs.forEach(bg => {
-                        if (bg.querySelector('.add_bg_but') || bg.classList.contains('add_bg_but')) return;
+                    allBgs.forEach(bg => {
+                        const bgFile = bg.getAttribute('bgfile');
+                        // ### FIX START: 排除“添加”按钮和受保护的背景 ###
+                        if (bg.querySelector('.add_bg_but') || bg.classList.contains('add_bg_but') || protectedBgs.includes(bgFile)) return;
+                        // ### FIX END ###
                 
                         const clone = bg.cloneNode(true);
-                        const bgFile = clone.getAttribute('bgfile');
-                
+                        
                         const checkbox = document.createElement('input');
                         checkbox.type = 'checkbox';
                         checkbox.className = 'bg-select-checkbox';
@@ -597,24 +620,27 @@
                     }
                 });
                 
+                // ### FIX START: 更精确的按钮显隐控制 ###
                 manageBgsBtn.addEventListener('click', () => {
                     isManageBgMode = !isManageBgMode;
                     managerPanel.classList.toggle('manage-bg-mode', isManageBgMode);
                     manageBgsBtn.classList.toggle('selected', isManageBgMode);
                     manageBgsBtn.textContent = isManageBgMode ? '完成管理' : '🖼️ 管理背景';
-                
-                    // ### FIX START: Let CSS handle visibility instead of direct style manipulation ###
-                    // This fixes the button visibility issues.
+
+                    // 切换模式时，确保主题相关的操作按钮栏是隐藏的
+                    batchActionsBar.classList.remove('visible');
+                    // 并且批量编辑模式是关闭的
+                    if (isBatchEditMode) batchEditBtn.click();
+
                     if (isManageBgMode) {
-                        if (isBatchEditMode) batchEditBtn.click();
                         if (isReorderMode) reorderModeBtn.click();
                         renderBackgroundManagerUI();
                     } else {
                         selectedBackgrounds.clear();
                         buildThemeUI();
                     }
-                    // ### FIX END ###
                 });
+                // ### FIX END ###
 
                 expandAllBtn.addEventListener('click', () => {
                     localStorage.setItem(COLLAPSED_FOLDERS_KEY, JSON.stringify([]));
@@ -680,20 +706,18 @@
                     for (const file of files) {
                         try {
                             const formData = new FormData();
-                            // ### FIX START: Use 'avatar' as the field name ###
-                            formData.append('avatar', file);
-                            // ### FIX END ###
+                            formData.append('image', file);
                             await uploadBackground(formData);
                             successCount++;
                         } catch (err) {
                             console.error(`上传背景 "${file.name}" 时出错:`, err);
-                            toastr.error(`上传背景 "${file.name}" 失败`);
+                            toastr.error(`上传背景 "${file.name}" 失败: ${err.message}`);
                             errorCount++;
                         }
                     }
                 
                     hideLoader();
-                    toastr.success(`背景导入完成！成功 ${successCount} 个，失败 ${errorCount} 个。`);
+                    toastr.info(`背景导入完成！成功 ${successCount} 个，失败 ${errorCount} 个。`);
                     
                     document.querySelector('#site_logo').click();
                     setTimeout(() => {
@@ -728,14 +752,17 @@
                             await deleteBackground(bgFile);
                             successCount++;
                         } catch (err) {
-                            console.error(`删除背景 "${bgFile}" 时出错:`, err);
-                            toastr.error(`删除背景 "${bgFile}" 失败`);
                             errorCount++;
                         }
                     }
                 
                     hideLoader();
-                    toastr.success(`背景删除完成！成功 ${successCount} 个，失败 ${errorCount} 个。`);
+                    // ### FIX START: 改进了删除完成后的提示 ###
+                    let summary = `背景删除完成！成功 ${successCount} 个`;
+                    if (errorCount > 0) summary += `，失败 ${errorCount} 个`;
+                    summary += '。';
+                    toastr.info(summary);
+                    // ### FIX END ###
                     
                     selectedBackgrounds.clear();
                     
