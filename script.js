@@ -21,10 +21,10 @@
                 let allParsedThemes = [];
                 let refreshNeeded = false;
                 let isReorderMode = false;
-                let isManageBgMode = false;
+                let isManageBgMode = false; // Flag for background management mode
                 let isBindingMode = false;
                 let themeNameToBind = null;
-                let selectedBackgrounds = new Set();
+                let selectedBackgrounds = new Set(); // To track selected backgrounds for deletion
                 let originalBgParent = null;
 
                 async function apiRequest(endpoint, method = 'POST', body = {}) {
@@ -54,7 +54,7 @@
                 async function deleteBackground(bgFile) { await apiRequest('backgrounds/delete', 'POST', { name: bgFile }); }
                 async function uploadBackground(formData) {
                     const headers = getRequestHeaders();
-                    delete headers['Content-Type'];
+                    delete headers['Content-Type']; // Let the browser set the correct multipart/form-data header
                     await fetch('/api/backgrounds/upload', { method: 'POST', headers, body: formData });
                 }
 
@@ -116,7 +116,7 @@
                         </div>
                         <div id="background-actions-bar" style="display:none;">
                             <button id="batch-import-bg-btn">➕ 批量导入背景</button>
-                            <button id="batch-delete-bg-btn">🗑️ 删除选中背景</button>
+                            <button id="batch-delete-bg-btn" disabled>🗑️ 删除选中背景</button>
                         </div>
                         <div id="batch-actions-bar">
                             <button id="batch-add-tag-btn">➕ 添加标签</button>
@@ -219,6 +219,66 @@
                         localStorage.setItem(COLLAPSE_KEY, 'false');
                     }
                 }
+
+                // ### NEW FUNCTION START: Renders the background management UI ###
+                async function renderBackgroundManagerUI() {
+                    const scrollTop = contentWrapper.scrollTop;
+                    contentWrapper.innerHTML = '正在加载背景图...';
+                
+                    const bgListContainer = document.createElement('div');
+                    bgListContainer.className = 'bg_list';
+                
+                    const systemBgs = document.querySelectorAll('#bg_menu_content .bg_example');
+                    const customBgs = document.querySelectorAll('#bg_custom_content .bg_example');
+                
+                    const allBgs = [...systemBgs, ...customBgs];
+                
+                    if (allBgs.length === 0) {
+                        contentWrapper.innerHTML = '没有找到背景图。';
+                        return;
+                    }
+                
+                    allBgs.forEach(bg => {
+                        if (bg.querySelector('.add_bg_but')) return; // Skip the "add background" button
+                
+                        const clone = bg.cloneNode(true);
+                        const bgFile = clone.getAttribute('bgfile');
+                
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.className = 'bg-select-checkbox';
+                        checkbox.dataset.bgfile = bgFile;
+                        checkbox.checked = selectedBackgrounds.has(bgFile);
+                        
+                        checkbox.addEventListener('change', () => {
+                            if (checkbox.checked) {
+                                selectedBackgrounds.add(bgFile);
+                                clone.classList.add('selected-for-batch');
+                            } else {
+                                selectedBackgrounds.delete(bgFile);
+                                clone.classList.remove('selected-for-batch');
+                            }
+                            batchDeleteBgBtn.disabled = selectedBackgrounds.size === 0;
+                        });
+                
+                        clone.prepend(checkbox);
+                        clone.addEventListener('click', (e) => {
+                            if (e.target !== checkbox) {
+                                checkbox.click();
+                            }
+                        });
+                        if (selectedBackgrounds.has(bgFile)) {
+                            clone.classList.add('selected-for-batch');
+                        }
+                        bgListContainer.appendChild(clone);
+                    });
+                
+                    contentWrapper.innerHTML = '';
+                    contentWrapper.appendChild(bgListContainer);
+                    contentWrapper.scrollTop = scrollTop;
+                    batchDeleteBgBtn.disabled = selectedBackgrounds.size === 0;
+                }
+                // ### NEW FUNCTION END ###
 
                 async function buildThemeUI() {
                     const scrollTop = contentWrapper.scrollTop;
@@ -538,6 +598,25 @@
                     }
                 });
                 
+                // ### MODIFIED START: manageBgsBtn click listener ###
+                manageBgsBtn.addEventListener('click', () => {
+                    isManageBgMode = !isManageBgMode;
+                    managerPanel.classList.toggle('manage-bg-mode', isManageBgMode);
+                    backgroundActionsBar.classList.toggle('visible', isManageBgMode);
+                    manageBgsBtn.classList.toggle('selected', isManageBgMode);
+                    manageBgsBtn.textContent = isManageBgMode ? '完成管理' : '🖼️ 管理背景';
+                
+                    if (isManageBgMode) {
+                        if (isBatchEditMode) batchEditBtn.click();
+                        if (isReorderMode) reorderModeBtn.click();
+                        renderBackgroundManagerUI();
+                    } else {
+                        selectedBackgrounds.clear();
+                        buildThemeUI();
+                    }
+                });
+                // ### MODIFIED END ###
+
                 expandAllBtn.addEventListener('click', () => {
                     localStorage.setItem(COLLAPSED_FOLDERS_KEY, JSON.stringify([]));
                     buildThemeUI();
@@ -590,6 +669,86 @@
                 batchImportBtn.addEventListener('click', () => {
                     fileInput.click();
                 });
+
+                // ### NEW START: Background management logic ###
+                bgFileInput.addEventListener('change', async (event) => {
+                    const files = event.target.files;
+                    if (!files.length) return;
+                
+                    showLoader();
+                    let successCount = 0;
+                    let errorCount = 0;
+                
+                    for (const file of files) {
+                        try {
+                            const formData = new FormData();
+                            formData.append('image', file);
+                            await uploadBackground(formData);
+                            successCount++;
+                        } catch (err) {
+                            console.error(`上传背景 "${file.name}" 时出错:`, err);
+                            toastr.error(`上传背景 "${file.name}" 失败`);
+                            errorCount++;
+                        }
+                    }
+                
+                    hideLoader();
+                    toastr.success(`背景导入完成！成功 ${successCount} 个，失败 ${errorCount} 个。`);
+                    
+                    // Manually trigger SillyTavern's own background refresh logic
+                    document.querySelector('#site_logo').click();
+                    setTimeout(() => {
+                        document.querySelector('#site_logo').click();
+                        if (isManageBgMode) {
+                            renderBackgroundManagerUI();
+                        }
+                    }, 500);
+                
+                    event.target.value = '';
+                });
+
+                batchImportBgBtn.addEventListener('click', () => {
+                    bgFileInput.click();
+                });
+                
+                batchDeleteBgBtn.addEventListener('click', async () => {
+                    if (selectedBackgrounds.size === 0) {
+                        toastr.info('请先选择至少一个背景图。');
+                        return;
+                    }
+                    if (!confirm(`确定要删除选中的 ${selectedBackgrounds.size} 个背景图吗？此操作不可撤销。`)) {
+                        return;
+                    }
+                
+                    showLoader();
+                    let successCount = 0;
+                    let errorCount = 0;
+                
+                    for (const bgFile of selectedBackgrounds) {
+                        try {
+                            await deleteBackground(bgFile);
+                            successCount++;
+                        } catch (err) {
+                            console.error(`删除背景 "${bgFile}" 时出错:`, err);
+                            toastr.error(`删除背景 "${bgFile}" 失败`);
+                            errorCount++;
+                        }
+                    }
+                
+                    hideLoader();
+                    toastr.success(`背景删除完成！成功 ${successCount} 个，失败 ${errorCount} 个。`);
+                    
+                    selectedBackgrounds.clear();
+                    
+                    document.querySelector('#site_logo').click();
+                    setTimeout(() => {
+                        document.querySelector('#site_logo').click();
+                        if (isManageBgMode) {
+                            renderBackgroundManagerUI();
+                        }
+                    }, 500);
+                });
+                // ### NEW END ###
 
                 document.querySelector('#batch-add-tag-btn').addEventListener('click', async () => {
                     if (selectedForBatch.size === 0) { toastr.info('请先选择至少一个主题。'); return; }
@@ -851,13 +1010,16 @@
                 });
 
                 const observer = new MutationObserver((mutations) => {
-                    buildThemeUI();
+                    if (!isManageBgMode) {
+                        buildThemeUI();
+                    }
                 });
                 observer.observe(originalSelect, { childList: true, subtree: true, characterData: true });
 
                 const bgMenuContent = document.getElementById('bg_menu_content');
                 const bgCustomContent = document.getElementById('bg_custom_content');
                 
+                // ### MODIFIED START: bgObserverCallback with UI fix ###
                 const bgObserverCallback = async (e) => {
                     if (!isBindingMode) return;
 
@@ -875,10 +1037,19 @@
 
                     isBindingMode = false;
                     themeNameToBind = null;
+                    
                     document.querySelector('#logo_block .drawer-toggle').click();
+
+                    setTimeout(() => {
+                        const userSettingsPanel = document.querySelector('#user-settings-block');
+                        if (userSettingsPanel && userSettingsPanel.classList.contains('closedDrawer')) {
+                            document.querySelector('#user-settings-button .drawer-toggle').click();
+                        }
+                    }, 150);
 
                     await buildThemeUI();
                 };
+                // ### MODIFIED END ###
 
                 if (bgMenuContent) bgMenuContent.addEventListener('click', bgObserverCallback, true);
                 if (bgCustomContent) bgCustomContent.addEventListener('click', bgObserverCallback, true);
