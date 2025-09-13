@@ -27,7 +27,6 @@
                 let selectedBackgrounds = new Set();
 
                 async function apiRequest(endpoint, method = 'POST', body = {}) {
-                    // This is a generic function for JSON APIs, not suitable for FormData.
                     try {
                         const headers = getRequestHeaders();
                         const options = { method, headers, body: JSON.stringify(body) };
@@ -49,12 +48,13 @@
                 async function deleteTheme(themeName) { await apiRequest('themes/delete', 'POST', { name: themeName }); }
                 async function saveTheme(themeObject) { await apiRequest('themes/save', 'POST', themeObject); }
 
+                // ### FINAL FIX START: Use FormData with the correct key 'name' for background deletion ###
                 async function deleteBackground(bgFile) {
                     const formData = new FormData();
-                    formData.append('file', bgFile);
+                    formData.append('name', bgFile); // The server expects the key to be 'name' in FormData
                     
                     const headers = getRequestHeaders();
-                    delete headers['Content-Type'];
+                    delete headers['Content-Type']; // Let browser set the multipart/form-data boundary
 
                     const response = await fetch('/api/backgrounds/delete', {
                         method: 'POST',
@@ -67,6 +67,7 @@
                         throw new Error(responseText || `HTTP error! status: ${response.status}`);
                     }
                 }
+                // ### FINAL FIX END ###
 
                 async function uploadBackground(formData) {
                     const headers = getRequestHeaders();
@@ -252,13 +253,12 @@
                 
                     const allBgs = [...systemBgs, ...customBgs];
                 
-                    if (allBgs.length === 0) {
+                    if (allBgs.length === 1 && allBgs[0].querySelector('.add_bg_but')) {
                         contentWrapper.innerHTML = '没有找到背景图。';
                         return;
                     }
                 
                     allBgs.forEach(bg => {
-                        // Exclude only the functional "Add" button
                         if (bg.querySelector('.add_bg_but')) return;
 
                         const bgFile = bg.getAttribute('bgfile');
