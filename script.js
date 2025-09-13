@@ -752,7 +752,7 @@
                     bgFileInput.click();
                 });
                 
-                batchDeleteBgBtn.addEventListener('click', async () => {
+                                batchDeleteBgBtn.addEventListener('click', async () => {
                     if (selectedBackgrounds.size === 0) {
                         toastr.info('请先选择至少一个背景图。');
                         return;
@@ -789,13 +789,13 @@
                     selectedBackgrounds.clear();
                     showRefreshNotification();
                     
-                    document.querySelector('#site_logo').click();
-                    setTimeout(() => {
-                        document.querySelector('#site_logo').click();
-                        if (isManageBgMode) {
-                            setTimeout(() => renderBackgroundManagerUI(), 100);
-                        }
-                    }, 500);
+                    // ### 核心修改 ###
+                    // 删除了所有 document.querySelector('#site_logo').click(); 的代码
+                    // 并在短暂延迟后直接调用函数重新渲染背景列表，让页面停留在当前插件面板
+                    if (isManageBgMode) {
+                        // 使用一个短暂的延迟确保DOM更新完成
+                        setTimeout(() => renderBackgroundManagerUI(), 100); 
+                    }
                 });
                 
                 document.querySelector('#batch-add-tag-btn').addEventListener('click', async () => {
@@ -1111,5 +1111,4 @@
         }
     }, 250);
 })();
-
 
