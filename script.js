@@ -15,7 +15,7 @@
                 const FAVORITES_KEY = 'themeManager_favorites';
                 const COLLAPSE_KEY = 'themeManager_collapsed';
                 const CATEGORY_ORDER_KEY = 'themeManager_categoryOrder';
-                const COLLAPSED_FOLD_KEY = 'themeManager_collapsedFolders';
+                const COLLAPSED_FOLDERS_KEY = 'themeManager_collapsedFolders';
                 const THEME_BACKGROUND_BINDINGS_KEY = 'themeManager_backgroundBindings';
 
                 let allParsedThemes = [];
@@ -51,7 +51,9 @@
                 async function getAllThemesFromAPI() { return (await apiRequest('settings/get', 'POST', {})).themes || []; }
                 async function deleteTheme(themeName) { await apiRequest('themes/delete', 'POST', { name: themeName }); }
                 async function saveTheme(themeObject) { await apiRequest('themes/save', 'POST', themeObject); }
+                
                 async function deleteBackground(bgFile) { await apiRequest('backgrounds/delete', 'POST', { file: bgFile }); }
+
                 async function uploadBackground(formData) {
                     const headers = getRequestHeaders();
                     delete headers['Content-Type'];
@@ -224,7 +226,7 @@
                     }
                 }
 
-                // ### FIX START: Differentiate between system and custom backgrounds ###
+                // ### FIX START: Reworked to only allow deletion of custom backgrounds ###
                 async function renderBackgroundManagerUI() {
                     const scrollTop = contentWrapper.scrollTop;
                     contentWrapper.innerHTML = '正在加载背景图...';
@@ -240,18 +242,19 @@
                         return;
                     }
 
-                    // Render system backgrounds without checkboxes
+                    // Render system backgrounds without any controls
                     systemBgs.forEach(bg => {
-                        if (bg.querySelector('.add_bg_but') || bg.classList.contains('add_bg_but')) return;
+                        if (bg.querySelector('.add_bg_but')) return;
                         const clone = bg.cloneNode(true);
                         bgListContainer.appendChild(clone);
                     });
 
-                    // Render custom backgrounds with checkboxes for deletion
+                    // Render custom (user-uploaded) backgrounds with checkboxes for deletion
                     customBgs.forEach(bg => {
                         const bgFile = bg.getAttribute('bgfile');
+                        if (!bgFile) return;
+
                         const clone = bg.cloneNode(true);
-                        
                         const checkbox = document.createElement('input');
                         checkbox.type = 'checkbox';
                         checkbox.className = 'bg-select-checkbox';
@@ -271,6 +274,7 @@
                 
                         clone.prepend(checkbox);
                         clone.addEventListener('click', (e) => {
+                            // Allow clicking anywhere on the image to toggle the checkbox
                             if (e.target !== checkbox) {
                                 checkbox.click();
                             }
@@ -324,7 +328,7 @@
                             sortedCategories.push('未分类');
                         }
 
-                        const collapsedFolders = new Set(JSON.parse(localStorage.getItem(COLLAPSED_FOLD_KEY)) || []);
+                        const collapsedFolders = new Set(JSON.parse(localStorage.getItem(COLLAPSED_FOLDERS_KEY)) || []);
 
                         sortedCategories.forEach(category => {
                             const themesInCategory = (category === '⭐ 收藏夹') ? allParsedThemes.filter(t => favorites.includes(t.value)) : allParsedThemes.filter(t => t.tags.includes(category));
@@ -631,7 +635,7 @@
                 });
 
                 expandAllBtn.addEventListener('click', () => {
-                    localStorage.setItem(COLLAPSED_FOLD_KEY, JSON.stringify([]));
+                    localStorage.setItem(COLLAPSED_FOLDERS_KEY, JSON.stringify([]));
                     buildThemeUI();
                 });
                 
@@ -639,7 +643,7 @@
                     const allFolderNames = Array.from(contentWrapper.querySelectorAll('.theme-category'))
                         .map(div => div.dataset.categoryName)
                         .filter(name => name);
-                    localStorage.setItem(COLLAPSED_FOLD_KEY, JSON.stringify(allFolderNames));
+                    localStorage.setItem(COLLAPSED_FOLDERS_KEY, JSON.stringify(allFolderNames));
                     buildThemeUI();
                 });
 
@@ -925,7 +929,7 @@
                                 list.style.display = isHidden ? 'block' : 'none';
                                 
                                 const categoryName = categoryTitle.parentElement.dataset.categoryName;
-                                let collapsedFolders = JSON.parse(localStorage.getItem(COLLAPSED_FOLD_KEY)) || [];
+                                let collapsedFolders = JSON.parse(localStorage.getItem(COLLAPSED_FOLDERS_KEY)) || [];
                                 if (!isHidden) {
                                     if (!collapsedFolders.includes(categoryName)) {
                                         collapsedFolders.push(categoryName);
@@ -933,7 +937,7 @@
                                 } else {
                                     collapsedFolders = collapsedFolders.filter(name => name !== categoryName);
                                 }
-                                localStorage.setItem(COLLAPSED_FOLD_KEY, JSON.stringify(collapsedFolders));
+                                localStorage.setItem(COLLAPSED_FOLDERS_KEY, JSON.stringify(collapsedFolders));
                             }
                         }
                         return;
