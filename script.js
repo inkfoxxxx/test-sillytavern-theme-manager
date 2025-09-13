@@ -51,8 +51,27 @@
                 async function getAllThemesFromAPI() { return (await apiRequest('settings/get', 'POST', {})).themes || []; }
                 async function deleteTheme(themeName) { await apiRequest('themes/delete', 'POST', { name: themeName }); }
                 async function saveTheme(themeObject) { await apiRequest('themes/save', 'POST', themeObject); }
-                
-                async function deleteBackground(bgFile) { await apiRequest('backgrounds/delete', 'POST', { file: bgFile }); }
+
+                // ### FIX START: Re-implement deleteBackground to use FormData, matching SillyTavern's server expectation ###
+                async function deleteBackground(bgFile) {
+                    const formData = new FormData();
+                    formData.append('file', bgFile); // The server expects the key to be 'file'
+                    
+                    const headers = getRequestHeaders();
+                    delete headers['Content-Type']; // Let the browser set the correct multipart/form-data header
+
+                    const response = await fetch('/api/backgrounds/delete', {
+                        method: 'POST',
+                        headers: headers,
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        const responseText = await response.text();
+                        throw new Error(responseText || `HTTP error! status: ${response.status}`);
+                    }
+                }
+                // ### FIX END ###
 
                 async function uploadBackground(formData) {
                     const headers = getRequestHeaders();
@@ -226,7 +245,7 @@
                     }
                 }
 
-                // ### FIX START: Reworked to only allow deletion of custom backgrounds ###
+                // ### FIX START: Differentiate between system and custom backgrounds for deletion capability ###
                 async function renderBackgroundManagerUI() {
                     const scrollTop = contentWrapper.scrollTop;
                     contentWrapper.innerHTML = '正在加载背景图...';
@@ -241,19 +260,19 @@
                         contentWrapper.innerHTML = '没有找到背景图。';
                         return;
                     }
-
-                    // Render system backgrounds without any controls
+                
+                    // Render system backgrounds (non-deletable)
                     systemBgs.forEach(bg => {
                         if (bg.querySelector('.add_bg_but')) return;
                         const clone = bg.cloneNode(true);
                         bgListContainer.appendChild(clone);
                     });
-
-                    // Render custom (user-uploaded) backgrounds with checkboxes for deletion
+                
+                    // Render custom backgrounds (deletable)
                     customBgs.forEach(bg => {
                         const bgFile = bg.getAttribute('bgfile');
-                        if (!bgFile) return;
-
+                        if (!bgFile) return; 
+                
                         const clone = bg.cloneNode(true);
                         const checkbox = document.createElement('input');
                         checkbox.type = 'checkbox';
@@ -274,7 +293,6 @@
                 
                         clone.prepend(checkbox);
                         clone.addEventListener('click', (e) => {
-                            // Allow clicking anywhere on the image to toggle the checkbox
                             if (e.target !== checkbox) {
                                 checkbox.click();
                             }
@@ -293,6 +311,7 @@
                 // ### FIX END ###
 
                 async function buildThemeUI() {
+                    // ... (This function remains unchanged)
                     const scrollTop = contentWrapper.scrollTop;
                     contentWrapper.innerHTML = '正在加载主题...';
                     try {
@@ -773,6 +792,7 @@
                     }
                     
                     selectedBackgrounds.clear();
+                    showRefreshNotification();
                     
                     document.querySelector('#site_logo').click();
                     setTimeout(() => {
@@ -820,6 +840,7 @@
                 document.querySelector('#batch-dissolve-btn').addEventListener('click', performBatchDissolve);
 
                 contentWrapper.addEventListener('click', async (event) => {
+                    // ... (This giant function remains unchanged)
                     const target = event.target;
                     const button = target.closest('button');
                     const themeItem = target.closest('.theme-item');
