@@ -85,3 +85,51 @@
     .theme-item-name { white-space: normal; overflow: visible; text-overflow: clip; min-width: 0; flex-grow: 1; }
     .theme-item-buttons { margin-left: auto; flex-shrink: 0; }
 }
+
+/* 在 style (1).css 文件末尾添加以下内容 */
+
+/* 背景管理模式下的样式 */
+#theme-manager-panel.manage-bg-mode .theme-category { display: none; }
+#theme-manager-panel.manage-bg-mode .theme-manager-actions:not(:has(#manage-bgs-btn)) { display: none; }
+#theme-manager-panel .bg_list { 
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 10px; 
+    padding: 10px 0; 
+    justify-content: center; 
+    max-height: 50vh;
+    overflow-y: auto;
+}
+#theme-manager-panel .bg_example { 
+    position: relative; 
+    cursor: pointer; 
+    border: 2px solid transparent; 
+    transition: border-color 0.2s; 
+    border-radius: 5px;
+    overflow: hidden;
+}
+#theme-manager-panel .bg_example:hover { border-color: var(--quote-color); }
+
+.bg-select-checkbox { 
+    position: absolute; 
+    top: 5px; 
+    left: 5px; 
+    width: 20px; 
+    height: 20px; 
+    z-index: 10; 
+    cursor: pointer; 
+    accent-color: var(--primary-color, #007bff);
+}
+
+#theme-manager-panel .bg_example.selected-for-batch { 
+    border-color: var(--primary-color, #007bff); 
+    box-shadow: 0 0 8px var(--primary-color, #007bff); 
+}
+
+#theme-manager-panel .bg_example .bg_example_img,
+#theme-manager-panel .bg_example .bg_example_vid {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
