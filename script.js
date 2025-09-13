@@ -50,6 +50,8 @@
 
                 // ### FINAL FIX START: Use FormData with the correct key 'name' for background deletion ###
                 async function deleteBackground(bgFile) {
+                    // 调试
+                    console.log('正在尝试删除的背景文件名:', bgFile);
                     const formData = new FormData();
                     formData.append('name', bgFile); // The server expects the key to be 'name' in FormData
                     
@@ -59,7 +61,7 @@
                     const response = await fetch('/api/backgrounds/delete', {
                         method: 'POST',
                         headers: headers,
-                        body: formData
+                        body: formData,
                     });
 
                     if (!response.ok) {
