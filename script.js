@@ -1122,14 +1122,14 @@
 
                     let bindings = JSON.parse(localStorage.getItem(CHARACTER_THEME_BINDINGS_KEY)) || {};
                     const currentBinding = bindings[chid] || '';
+                    let selectedValue = currentBinding; // 预设值为当前绑定，以便用户不改变直接点OK
 
                     const popupContent = document.createElement('div');
                     popupContent.innerHTML = `<h4>为角色绑定美化</h4><p>选择一个美化主题，在下次加载此角色时将自动应用。</p>`;
 
                     const select = document.createElement('select');
-                    // ### 关键修复：添加 'popup-input' 类 ###
-                    select.className = 'text_pole popup-input'; 
-                    select.id = 'theme-binding-select'; // id 是可选的，但保留无妨
+                    select.id = 'theme-binding-select';
+                    select.className = 'text_pole';
 
                     const noBindingOption = document.createElement('option');
                     noBindingOption.value = '';
@@ -1146,15 +1146,23 @@
                     select.value = currentBinding;
                     popupContent.appendChild(select);
                     
-                    // ### 关键修复：使用 'input' 类型，并直接使用返回的值 ###
-                    const newBinding = await callGenericPopup(popupContent, 'input', null, {
+                    const userConfirmed = await callGenericPopup(popupContent, 'text', null, {
                         okButton: '保存',
                         cancelButton: '取消',
-                        wide: true
+                        wide: true,
+                        onOpen: (dialog) => {
+                            // 在弹窗打开时，为下拉菜单附加一个事件监听器
+                            const selectElement = dialog.querySelector('#theme-binding-select');
+                            selectElement.addEventListener('change', () => {
+                                // 实时更新外部变量的值
+                                selectedValue = selectElement.value;
+                            });
+                        }
                     });
 
-                    // callGenericPopup 在取消时返回 false
-                    if (newBinding !== false) {
+                    if (userConfirmed) {
+                        // 使用我们实时捕获的 selectedValue，而不是弹窗的返回值
+                        const newBinding = selectedValue;
                         if (newBinding) {
                             bindings[chid] = newBinding;
                             toastr.success(`已将角色绑定到美化：<b>${newBinding}</b>`);
