@@ -1107,7 +1107,7 @@
                 if (bgMenuContent) bgMenuContent.addEventListener('click', bgObserverCallback, true);
                 if (bgCustomContent) bgCustomContent.addEventListener('click', bgObserverCallback, true);
 
-                // ==========================================================
+                                // ==========================================================
                 // ========= 新增功能：角色卡绑定美化 (Character Theme Binding) =========
                 // ==========================================================
 
@@ -1123,7 +1123,7 @@
 
                     let bindings = JSON.parse(localStorage.getItem(CHARACTER_THEME_BINDINGS_KEY)) || {};
                     const currentBinding = bindings[chid] || '';
-                    let selectedValue = currentBinding;
+                    let selectedValue = currentBinding; // 预设值为当前绑定
 
                     const popupContent = document.createElement('div');
                     popupContent.innerHTML = `<h4>为角色绑定美化</h4><p>选择一个美化主题，在下次加载此角色时将自动应用。</p>`;
@@ -1147,58 +1147,73 @@
                     select.value = currentBinding;
                     popupContent.appendChild(select);
                     
-                    const userConfirmed = await callGenericPopup(popupContent, 'confirm', null, {
+                    // ### 最终核心修复 ###
+                    // 我们只利用 popup 来显示界面和知道用户点了OK，具体逻辑在 onOpen 中完成
+                    await callGenericPopup(popupContent, 'confirm', null, {
                         okButton: '保存',
                         cancelButton: '取消',
                         wide: true,
-                        onOpen: (popupInstance) => {
-                            const dialogElement = popupInstance.dlg;
+                        onOpen: (popup) => {
+                            // 正确的访问方式: popup.dlg
+                            const dialogElement = popup.dlg; 
                             const selectElement = dialogElement.querySelector('#theme-binding-select');
-                            
+                            const okButton = dialogElement.querySelector('.popup-button-ok');
+
+                            // 实时更新外部变量的值
                             selectElement.addEventListener('change', () => {
                                 selectedValue = selectElement.value;
                             });
+
+                            // 覆盖默认的OK按钮行为
+                            okButton.addEventListener('click', (e) => {
+                                e.preventDefault(); // 阻止弹窗默认的关闭行为
+                                const newBinding = selectedValue;
+                                if (newBinding) {
+                                    bindings[chid] = newBinding;
+                                    // 修复 tostr 的 HTML 显示问题
+                                    toastr.success(`已将角色绑定到美化：<b>${newBinding}</b>`, '', { escapeHtml: false });
+                                } else {
+                                    delete bindings[chid];
+                                    toastr.info('已取消此角色的美化绑定。');
+                                }
+                                localStorage.setItem(CHARACTER_THEME_BINDINGS_KEY, JSON.stringify(bindings));
+                                popup.close(); // 手动关闭弹窗
+                            });
                         }
                     });
-
-                    if (userConfirmed) {
-                        const newBinding = selectedValue;
-                        if (newBinding) {
-                            bindings[chid] = newBinding;
-                            toastr.success(`已将角色绑定到美化：<b>${newBinding}</b>`);
-                        } else {
-                            delete bindings[chid];
-                            toastr.info('已取消此角色的美化绑定。');
-                        }
-                        localStorage.setItem(CHARACTER_THEME_BINDINGS_KEY, JSON.stringify(bindings));
-                    }
                 });
 
                 // 监听SillyTavern的chatLoaded事件以自动应用美化
                 document.addEventListener('chatLoaded', (event) => {
-                    const { character } = event.detail;
-                    if (!character || !character.avatar) return;
+                    try {
+                        const { character } = event.detail;
+                        if (!character || !character.avatar) return;
 
-                    const bindings = JSON.parse(localStorage.getItem(CHARACTER_THEME_BINDINGS_KEY)) || {};
-                    const boundTheme = bindings[character.avatar];
+                        console.log(`[Theme Manager] 'chatLoaded' event triggered for character: ${character.name}, avatar: ${character.avatar}`);
 
-                    if (boundTheme) {
-                        const themeSelect = document.querySelector('#themes');
-                        const themeOption = themeSelect.querySelector(`option[value="${boundTheme}"]`);
+                        const bindings = JSON.parse(localStorage.getItem(CHARACTER_THEME_BINDINGS_KEY)) || {};
+                        const boundTheme = bindings[character.avatar];
 
-                        if (themeOption && themeSelect.value !== boundTheme) {
-                            console.log(`Theme Manager: 检测到角色绑定美化，自动切换到 -> ${boundTheme}`);
-                            themeSelect.value = boundTheme;
-                            themeSelect.dispatchEvent(new Event('change'));
-                            toastr.info(`已自动应用角色绑定的美化：<b>${boundTheme}</b>`, '', {timeOut: 2000});
+                        console.log(`[Theme Manager] Checking for bound theme. Found: ${boundTheme}`);
+
+                        if (boundTheme) {
+                            const themeSelect = document.querySelector('#themes');
+                            const themeOption = themeSelect.querySelector(`option[value="${boundTheme}"]`);
+
+                            if (themeOption && themeSelect.value !== boundTheme) {
+                                console.log(`[Theme Manager] Applying bound theme: ${boundTheme}`);
+                                themeSelect.value = boundTheme;
+                                themeSelect.dispatchEvent(new Event('change'));
+                                toastr.info(`已自动应用角色绑定的美化：<b>${boundTheme}</b>`, '', {timeOut: 2000, escapeHtml: false});
+                            }
                         }
+                    } catch (error) {
+                        console.error('[Theme Manager] Error in chatLoaded listener:', error);
                     }
                 });
-
                 // ==========================================================
                 // ======================= 功能结束 =========================
                 // ==========================================================
-
 
                 buildThemeUI().then(() => {
                     // 动态添加“绑定主题”按钮
