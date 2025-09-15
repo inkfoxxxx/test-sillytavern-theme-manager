@@ -142,8 +142,8 @@
                             <button id="manage-bgs-btn" title="管理背景图">🖼️ 管理背景</button>
                         </div>
                         <div id="background-actions-bar" style="display:none;" data-mode="bg">
-                            <button id="batch-import-bg-btn">➕ 批量导入背景</button>
-                            <button id="batch-delete-bg-btn" disabled>🗑️ 删除选中背景</button>
+                            <button id="batch-import-bg-btn" class="menu_button menu_button_icon">➕ 批量导入背景</button>
+                            <button id="batch-delete-bg-btn"  class="menu_button menu_button_icon" disabled>🗑️ 删除选中背景</button>
                         </div>
                         <div id="batch-actions-bar" style="display:none;" data-mode="theme">
                             <button id="batch-add-tag-btn">➕ 添加标签</button>
