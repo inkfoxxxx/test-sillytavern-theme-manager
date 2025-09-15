@@ -1123,7 +1123,7 @@
 
                     let bindings = JSON.parse(localStorage.getItem(CHARACTER_THEME_BINDINGS_KEY)) || {};
                     const currentBinding = bindings[chid] || '';
-                    let selectedValue = currentBinding; // 预设值为当前绑定
+                    let selectedValue = currentBinding;
 
                     const popupContent = document.createElement('div');
                     popupContent.innerHTML = `<h4>为角色绑定美化</h4><p>选择一个美化主题，在下次加载此角色时将自动应用。</p>`;
@@ -1178,10 +1178,15 @@
                     });
                 });
 
-                // 监听SillyTavern的chatLoaded事件以自动应用美化
-                document.addEventListener('chatLoaded', (event) => {
-                    try {
-                        const { character } = event.detail;
+                // 监听角色卡片的点击事件以自动应用美化
+                document.getElementById('right-nav-panel').addEventListener('click', (event) => {
+                    const characterBlock = event.target.closest('.character_select');
+                    if (!characterBlock) return;
+                    
+                    setTimeout(() => {
+                        const chid = characterBlock.dataset.chid;
+                        const character = SillyTavern.getContext().characters[chid];
+
                         if (!character || !character.avatar) return;
 
                         const bindings = JSON.parse(localStorage.getItem(CHARACTER_THEME_BINDINGS_KEY)) || {};
@@ -1192,15 +1197,13 @@
                             const themeOption = themeSelect.querySelector(`option[value="${boundTheme}"]`);
 
                             if (themeOption && themeSelect.value !== boundTheme) {
-                                console.log(`Theme Manager: 检测到角色绑定美化，自动切换到 -> ${boundTheme}`);
+                                console.log(`[Theme Manager] Applying bound theme via click: ${boundTheme}`);
                                 themeSelect.value = boundTheme;
                                 themeSelect.dispatchEvent(new Event('change'));
                                 toastr.info(`已自动应用角色绑定的美化：<b>${boundTheme}</b>`, '', {timeOut: 2000, escapeHtml: false});
                             }
                         }
-                    } catch (error) {
-                        console.error('[Theme Manager] Error in chatLoaded listener:', error);
-                    }
+                    }, 50);
                 });
 
                 // ==========================================================
