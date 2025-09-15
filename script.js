@@ -429,6 +429,9 @@
                     let errorCount = 0;
                     let skippedCount = 0;
                     const currentThemes = await getAllThemesFromAPI();
+                    // ===== 新增代码：在循环外加载一次收藏夹数组 =====
+                    let favoritesToUpdate = JSON.parse(localStorage.getItem(FAVORITES_KEY)) || [];
+                    // =================================================
 
                     for (const oldName of selectedForBatch) {
                         try {
@@ -451,6 +454,13 @@
                                 await deleteTheme(oldName);
                                 manualUpdateOriginalSelect('rename', oldName, newName);
 
+                                // ===== 新增代码：检查并更新收藏夹 =====
+                                const favIndex = favoritesToUpdate.indexOf(oldName);
+                                if (favIndex > -1) {
+                                    favoritesToUpdate[favIndex] = newName;
+                                }
+                                // =========================================
+
                                 if (themeBackgroundBindings[oldName]) {
                                     themeBackgroundBindings[newName] = themeBackgroundBindings[oldName];
                                     delete themeBackgroundBindings[oldName];
@@ -463,6 +473,9 @@
                             errorCount++;
                         }
                     }
+                    // ===== 新增代码：在循环结束后，保存更新后的收藏夹 =====
+                    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesToUpdate));
+                    // =====================================================
                     localStorage.setItem(THEME_BACKGROUND_BINDINGS_KEY, JSON.stringify(themeBackgroundBindings));
 
                     hideLoader();
@@ -926,11 +939,22 @@
                                 await saveTheme({ ...themeObject, name: newName });
                                 await deleteTheme(oldName);
                                 manualUpdateOriginalSelect('rename', oldName, newName);
+
+                                // ===== 新增代码：检查并更新收藏夹 =====
+                                const favIndex = favorites.indexOf(oldName);
+                                if (favIndex > -1) {
+                                    favorites[favIndex] = newName;
+                                }
+                                // =========================================
+
                                 if (themeBackgroundBindings[oldName]) {
                                     themeBackgroundBindings[newName] = themeBackgroundBindings[oldName];
                                     delete themeBackgroundBindings[oldName];
                                 }
                             }
+                            // ===== 新增代码：循环外保存 =====
+                            localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+                            // =========================================
                             localStorage.setItem(THEME_BACKGROUND_BINDINGS_KEY, JSON.stringify(themeBackgroundBindings));
                             hideLoader();
                             toastr.success(`文件夹 "${categoryName}" 已解散！`);
@@ -1008,6 +1032,14 @@
                                 await saveTheme({ ...themeObject, name: newName });
                                 await deleteTheme(oldName);
                                 manualUpdateOriginalSelect('rename', oldName, newName);
+
+                                // ===== 新增代码：检查并更新收藏夹 =====
+                                const favIndex = favorites.indexOf(oldName);
+                                if (favIndex > -1) {
+                                    favorites[favIndex] = newName;
+                                    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+                                }
+                                // =========================================
 
                                 if (themeBackgroundBindings[oldName]) {
                                     themeBackgroundBindings[newName] = themeBackgroundBindings[oldName];
@@ -1111,4 +1143,3 @@
         }
     }, 250);
 })();
-
