@@ -1122,7 +1122,6 @@
 
                     let bindings = JSON.parse(localStorage.getItem(CHARACTER_THEME_BINDINGS_KEY)) || {};
                     const currentBinding = bindings[chid] || '';
-                    let selectedValue = currentBinding; // 预设值为当前绑定，以便用户不改变直接点OK
 
                     const popupContent = document.createElement('div');
                     popupContent.innerHTML = `<h4>为角色绑定美化</h4><p>选择一个美化主题，在下次加载此角色时将自动应用。</p>`;
@@ -1146,32 +1145,40 @@
                     select.value = currentBinding;
                     popupContent.appendChild(select);
                     
-                    const userConfirmed = await callGenericPopup(popupContent, 'text', null, {
+                    // ### 最终核心修复 ###
+                    // 创建 Popup 实例，并在 onOpen 回调中处理所有逻辑
+                    const popup = new Popup(popupContent, 'text', null, {
                         okButton: '保存',
                         cancelButton: '取消',
                         wide: true,
-                        onOpen: (dialog) => {
-                            // 在弹窗打开时，为下拉菜单附加一个事件监听器
-                            const selectElement = dialog.querySelector('#theme-binding-select');
-                            selectElement.addEventListener('change', () => {
-                                // 实时更新外部变量的值
-                                selectedValue = selectElement.value;
+                        onOpen: (popupInstance) => {
+                            // 正确的引用弹窗DOM的方式是 popupInstance.dlg
+                            const dialogElement = popupInstance.dlg;
+                            const selectElement = dialogElement.querySelector('#theme-binding-select');
+                            const okButton = dialogElement.querySelector('.popup-button-ok');
+                            const cancelButton = dialogElement.querySelector('.popup-button-cancel');
+
+                            okButton.addEventListener('click', () => {
+                                const newBinding = selectElement.value;
+                                if (newBinding) {
+                                    bindings[chid] = newBinding;
+                                    toastr.success(`已将角色绑定到美化：<b>${newBinding}</b>`);
+                                } else {
+                                    delete bindings[chid];
+                                    toastr.info('已取消此角色的美化绑定。');
+                                }
+                                localStorage.setItem(CHARACTER_THEME_BINDINGS_KEY, JSON.stringify(bindings));
+                                popupInstance.close();
+                            });
+
+                            cancelButton.addEventListener('click', () => {
+                                popupInstance.close();
                             });
                         }
                     });
 
-                    if (userConfirmed) {
-                        // 使用我们实时捕获的 selectedValue，而不是弹窗的返回值
-                        const newBinding = selectedValue;
-                        if (newBinding) {
-                            bindings[chid] = newBinding;
-                            toastr.success(`已将角色绑定到美化：<b>${newBinding}</b>`);
-                        } else {
-                            delete bindings[chid];
-                            toastr.info('已取消此角色的美化绑定。');
-                        }
-                        localStorage.setItem(CHARACTER_THEME_BINDINGS_KEY, JSON.stringify(bindings));
-                    }
+                    // 只负责显示弹窗，不关心它的返回值
+                    popup.show();
                 });
 
                 // 监听SillyTavern的chatLoaded事件以自动应用美化
@@ -1198,6 +1205,7 @@
                 // ==========================================================
                 // ======================= 功能结束 =========================
                 // ==========================================================
+
 
 
                 buildThemeUI().then(() => {
