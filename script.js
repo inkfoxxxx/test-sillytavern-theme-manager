@@ -50,7 +50,6 @@
                 async function deleteTheme(themeName) { await apiRequest('themes/delete', 'POST', { name: themeName }); }
                 async function saveTheme(themeObject) { await apiRequest('themes/save', 'POST', themeObject); }
 
-                // ### 最终解决方案 v6：使用正确的 JSON 键名 'bg' ###
                 async function deleteBackground(bgFile) {
                     const body = { bg: bgFile };
                     const headers = getRequestHeaders();
@@ -150,11 +149,11 @@
                         <div class="theme-content"></div>
                     </div>`;
                 originalContainer.prepend(managerPanel);
-
+                
                 const nativeButtonsContainer = managerPanel.querySelector('#native-buttons-container');
                 nativeButtonsContainer.appendChild(updateButton);
                 nativeButtonsContainer.appendChild(saveAsButton);
-
+                
                 const header = managerPanel.querySelector('#theme-manager-header');
                 const content = managerPanel.querySelector('#theme-manager-content');
                 const toggleIcon = managerPanel.querySelector('#theme-manager-toggle-icon');
@@ -171,7 +170,7 @@
                 const backgroundActionsBar = managerPanel.querySelector('#background-actions-bar');
                 const batchImportBgBtn = managerPanel.querySelector('#batch-import-bg-btn');
                 const batchDeleteBgBtn = managerPanel.querySelector('#batch-delete-bg-btn');
-
+                
                 const refreshNotice = managerPanel.querySelector('#theme-manager-refresh-notice');
                 const refreshBtn = managerPanel.querySelector('#theme-manager-refresh-page-btn');
                 refreshBtn.addEventListener('click', () => location.reload());
@@ -1146,10 +1145,15 @@
 
                     select.value = currentBinding;
                     popupContent.appendChild(select);
+                    
+                    // 使用 'text' 类型来显示自定义HTML，并检查返回的布尔值
+                    const userConfirmed = await callGenericPopup(popupContent, 'text', null, {
+                        okButton: '保存',
+                        cancelButton: '取消',
+                        wide: true
+                    });
 
-                    const selectedTheme = await callGenericPopup(popupContent, 'input', {okButton: '保存', wide: true});
-
-                    if (selectedTheme !== false) {
+                    if (userConfirmed) { // callGenericPopup 在点击OK时返回 true
                         const newBinding = document.querySelector('#theme-binding-select').value;
                         if (newBinding) {
                             bindings[chid] = newBinding;
