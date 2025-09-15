@@ -11,7 +11,6 @@
             clearInterval(initInterval);
 
             try {
-                // 确保 SillyTavern 的 callGenericPopup 可用
                 const { getRequestHeaders, showLoader, hideLoader, callGenericPopup } = SillyTavern.getContext();
                 const FAVORITES_KEY = 'themeManager_favorites';
                 const COLLAPSE_KEY = 'themeManager_collapsed';
@@ -555,7 +554,7 @@
                 }
 
                 // ===============================================
-                // ========= 事件监听器 (EVENT LISTENERS) =========
+                // =========== 事件监听器 (EVENT LISTENERS) ===========
                 // ===============================================
 
                 header.addEventListener('click', (e) => {
@@ -1128,8 +1127,9 @@
                     popupContent.innerHTML = `<h4>为角色绑定美化</h4><p>选择一个美化主题，在下次加载此角色时将自动应用。</p>`;
 
                     const select = document.createElement('select');
-                    select.id = 'theme-binding-select';
-                    select.className = 'text_pole';
+                    // ### 关键修复：添加 'popup-input' 类 ###
+                    select.className = 'text_pole popup-input'; 
+                    select.id = 'theme-binding-select'; // id 是可选的，但保留无妨
 
                     const noBindingOption = document.createElement('option');
                     noBindingOption.value = '';
@@ -1146,15 +1146,15 @@
                     select.value = currentBinding;
                     popupContent.appendChild(select);
                     
-                    // 使用 'text' 类型来显示自定义HTML，并检查返回的布尔值
-                    const userConfirmed = await callGenericPopup(popupContent, 'text', null, {
+                    // ### 关键修复：使用 'input' 类型，并直接使用返回的值 ###
+                    const newBinding = await callGenericPopup(popupContent, 'input', null, {
                         okButton: '保存',
                         cancelButton: '取消',
                         wide: true
                     });
 
-                    if (userConfirmed) { // callGenericPopup 在点击OK时返回 true
-                        const newBinding = document.querySelector('#theme-binding-select').value;
+                    // callGenericPopup 在取消时返回 false
+                    if (newBinding !== false) {
                         if (newBinding) {
                             bindings[chid] = newBinding;
                             toastr.success(`已将角色绑定到美化：<b>${newBinding}</b>`);
@@ -1216,4 +1216,3 @@
         }
     }, 250);
 })();
-
