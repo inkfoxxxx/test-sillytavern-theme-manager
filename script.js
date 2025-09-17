@@ -1157,9 +1157,16 @@
                             const okButton = dialogElement.querySelector('.popup-button-ok');
                             const cancelButton = dialogElement.querySelector('.popup-button-cancel');
 
-                            selectElement.addEventListener('change', () => {
-                                selectedValue = selectElement.value;
-                            });
+                            // ### 核心修改：使用 setTimeout 确保DOM已准备好 ###
+                            setTimeout(() => {
+                                $(selectElement).select2({
+                                    dropdownParent: $(dialogElement),
+                                    width: '100%',
+                                    placeholder: '搜索或选择一个美化...'
+                                }).on('change', (e) => {
+                                    selectedValue = $(e.target).val();
+                                });
+                            }, 0); // 延迟0毫秒即可
 
                             okButton.addEventListener('click', (e) => {
                                 e.preventDefault();
