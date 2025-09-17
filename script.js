@@ -1157,16 +1157,18 @@
                             const okButton = dialogElement.querySelector('.popup-button-ok');
                             const cancelButton = dialogElement.querySelector('.popup-button-cancel');
 
-                            // ### 核心修改：使用 setTimeout 确保DOM已准备好 ###
+                            // ### 核心修改：添加 allowClear: true ###
                             setTimeout(() => {
                                 $(selectElement).select2({
                                     dropdownParent: $(dialogElement),
                                     width: '100%',
-                                    placeholder: '搜索或选择一个美化...'
+                                    placeholder: '搜索或选择一个美化...',
+                                    allowClear: true // 允许用户清除选择
                                 }).on('change', (e) => {
                                     selectedValue = $(e.target).val();
                                 });
-                            }, 0); // 延迟0毫秒即可
+                            }, 0);
+                            // ### 修改结束 ###
 
                             okButton.addEventListener('click', (e) => {
                                 e.preventDefault();
