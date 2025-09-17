@@ -19,6 +19,21 @@
                 const THEME_BACKGROUND_BINDINGS_KEY = 'themeManager_backgroundBindings';
                 const CHARACTER_THEME_BINDINGS_KEY = 'themeManager_characterThemeBindings';
 
+                // ### 新增：注入CSS修复Select2样式 ###
+                function injectSelect2Fixes() {
+                    if (document.getElementById('theme-manager-select2-fixes')) return;
+                    const style = document.createElement('style');
+                    style.id = 'theme-manager-select2-fixes';
+                    style.innerHTML = `
+                        .select2-container--default .select2-selection--single .select2-selection__clear {
+                            right: 1.75em; /* 将清除按钮向左移动，避免与下拉箭头重叠 */
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+                injectSelect2Fixes();
+                // ### 结束新增 ###
+
                 let allParsedThemes = [];
                 let refreshNeeded = false;
                 let isReorderMode = false;
@@ -1110,8 +1125,6 @@
                 // ==========================================================
                 // ========= 新增功能：角色卡绑定美化 (Character Theme Binding) =========
                 // ==========================================================
-
-                // 绑定主题按钮的点击事件
                 document.body.addEventListener('click', async (event) => {
                     if (event.target.id !== 'link-theme-btn') return;
 
@@ -1132,10 +1145,15 @@
                     select.id = 'theme-binding-select';
                     select.className = 'text_pole';
 
+                    // ### 核心修复：为 placeholder 添加一个真正空的 option ###
+                    const placeholderOption = document.createElement('option');
+                    select.appendChild(placeholderOption); // 这个是给Select2的placeholder用的
+                    
                     const noBindingOption = document.createElement('option');
-                    noBindingOption.value = '';
+                    noBindingOption.value = 'none'; // 使用一个特定的值代表“无绑定”
                     noBindingOption.textContent = '— 无绑定 —';
                     select.appendChild(noBindingOption);
+                    // ### 修复结束 ###
 
                     document.querySelectorAll('#themes option').forEach(option => {
                         if (option.value) {
@@ -1144,7 +1162,7 @@
                         }
                     });
 
-                    select.value = currentBinding;
+                    select.value = currentBinding || 'none'; // 如果没有绑定，默认选中“无绑定”
                     popupContent.appendChild(select);
                     
                     await callGenericPopup(popupContent, 'confirm', null, {
@@ -1157,62 +1175,34 @@
                             const okButton = dialogElement.querySelector('.popup-button-ok');
                             const cancelButton = dialogElement.querySelector('.popup-button-cancel');
 
-                            // ### 核心修改：添加 allowClear: true ###
                             setTimeout(() => {
                                 $(selectElement).select2({
                                     dropdownParent: $(dialogElement),
                                     width: '100%',
                                     placeholder: '搜索或选择一个美化...',
-                                    allowClear: true // 允许用户清除选择
+                                    allowClear: true
                                 }).on('change', (e) => {
                                     selectedValue = $(e.target).val();
                                 });
                             }, 0);
-                            // ### 修改结束 ###
 
                             okButton.addEventListener('click', (e) => {
                                 e.preventDefault();
+                                // ### 核心修复：检查 'none' 和空值 ###
                                 const newBinding = selectedValue;
-                                if (newBinding) {
+                                if (newBinding && newBinding !== 'none') {
                                     bindings[chid] = newBinding;
                                     toastr.success(`已将角色绑定到美化：<b>${newBinding}</b>`, '', { escapeHtml: false });
                                 } else {
                                     delete bindings[chid];
                                     toastr.info('已取消此角色的美化绑定。');
                                 }
+                                // ### 修复结束 ###
                                 localStorage.setItem(CHARACTER_THEME_BINDINGS_KEY, JSON.stringify(bindings));
                                 cancelButton.click();
                             });
                         }
                     });
-                });
-
-                // 监听角色卡片的点击事件以自动应用美化
-                document.getElementById('right-nav-panel').addEventListener('click', (event) => {
-                    const characterBlock = event.target.closest('.character_select');
-                    if (!characterBlock) return;
-                    
-                    setTimeout(() => {
-                        const chid = characterBlock.dataset.chid;
-                        const character = SillyTavern.getContext().characters[chid];
-
-                        if (!character || !character.avatar) return;
-
-                        const bindings = JSON.parse(localStorage.getItem(CHARACTER_THEME_BINDINGS_KEY)) || {};
-                        const boundTheme = bindings[character.avatar];
-
-                        if (boundTheme) {
-                            const themeSelect = document.querySelector('#themes');
-                            const themeOption = themeSelect.querySelector(`option[value="${boundTheme}"]`);
-
-                            if (themeOption && themeSelect.value !== boundTheme) {
-                                console.log(`[Theme Manager] Applying bound theme via click: ${boundTheme}`);
-                                themeSelect.value = boundTheme;
-                                themeSelect.dispatchEvent(new Event('change'));
-                                toastr.info(`已自动应用角色绑定的美化：<b>${boundTheme}</b>`, '', {timeOut: 2000, escapeHtml: false});
-                            }
-                        }
-                    }, 50);
                 });
 
                 // ==========================================================
