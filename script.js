@@ -133,10 +133,8 @@
                             <button id="expand-all-btn" title="展开所有文件夹">全部展开</button>
                             <button id="collapse-all-btn" title="折叠所有文件夹">全部折叠</button>
                             <button id="manage-bgs-btn" title="管理背景图">🖼️ 管理背景</button>
-                            // 新增代码开始
                             <button id="tm-export-settings-btn" title="导出一个包含所有插件设置的配置文件，用于在不同设备间同步。">📤 导出配置</button>
                             <button id="tm-import-settings-btn" title="从配置文件中导入插件设置。">📥 导入配置</button>
-                            // 新增代码结束
                         </div>
                         <div id="background-actions-bar" style="display:none;" data-mode="bg">
                             <button id="batch-import-bg-btn" class="menu_button menu_button_icon">➕ 批量导入背景</button>
@@ -1343,4 +1341,5 @@
         }
     }, 250);
 })();
+
 
