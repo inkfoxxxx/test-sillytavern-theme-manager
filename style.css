@@ -6,8 +6,6 @@
     border: 1px solid var(--border-color); 
     width: 100%; 
     box-sizing: border-box;
-    flex-basis: 100% !important;
-    max-width: none !important;
 }
 
 #theme-manager-header { cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
@@ -17,61 +15,12 @@
 #theme-manager-toggle-icon.collapsed { transform: rotate(-90deg); }
 #theme-manager-content { transition: max-height 0.3s ease-in-out; overflow: hidden; }
 #UI-presets-block { gap: 0 !important; }
-
-/* 按钮布局优化 */
-.tm-actions-grid {
-    display: flex;
-    flex-wrap: wrap; /* 允许换行 */
-    gap: 10px; /* 组与组之间的间距 */
-    margin: 10px 0;
-}
-
-.tm-actions-group {
-    display: flex;
-    gap: 8px; /* 组内按钮的间距 */
-    flex-grow: 1; /* 让每个组尽可能伸展 */
-    align-items: center; /* 垂直居中对齐 */
-}
-
-.tm-actions-group input[type="search"] {
-    flex-grow: 1; /* 让搜索框填满它所在组的可用空间 */
-    background-color: rgba(0,0,0,0.2); 
-    border: 1px solid var(--border-color); 
-    color: var(--main-text-color); 
-    border-radius: 4px; 
-    padding: 5px 8px; 
-    min-width: 150px;
-}
-
-.tm-actions-grid button { 
-    background-color: rgba(128,128,128,0.2); 
-    color: var(--main-text-color); 
-    border: 1px solid var(--border-color); 
-    padding: 5px 10px; 
-    border-radius: 4px; 
-    cursor: pointer; 
-    transition: background-color 0.2s; 
-    white-space: nowrap; 
-}
-
-.tm-actions-grid button:hover { background-color: rgba(128,128,128,0.4); }
-.tm-actions-grid button.selected { 
-    background-color: var(--primary-color, #007bff); 
-    color: white; 
-    border-color: transparent; 
-}
-
+.theme-manager-actions { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+.theme-manager-actions input[type="search"] { flex-grow: 1; background-color: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--main-text-color); border-radius: 4px; padding: 5px 8px; min-width: 150px; }
+.theme-manager-actions button, #batch-actions-bar button { background-color: rgba(128,128,128,0.2); color: var(--main-text-color); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; white-space: nowrap; }
+.theme-manager-actions button:hover, #batch-actions-bar button:hover { background-color: rgba(128,128,128,0.4); }
+.theme-manager-actions button.selected, #batch-actions-bar button { background-color: var(--primary-color, #007bff); color: white; border-color: transparent; }
 #batch-actions-bar, #background-actions-bar { display: none; flex-wrap: wrap; gap: 8px; background-color: transparent; padding: 0; border-radius: 4px; margin-bottom: 10px; }
-#batch-actions-bar button, #background-actions-bar button {
-    background-color: var(--primary-color, #007bff); 
-    color: white; 
-    border: 1px solid var(--border-color); 
-    padding: 5px 10px; 
-    border-radius: 4px; 
-    cursor: pointer; 
-    transition: background-color 0.2s; 
-    white-space: nowrap; 
-}
 #batch-actions-bar.visible, #background-actions-bar.visible { display: flex; }
 #native-buttons-container { display: flex; gap: 5px; margin-left: auto; }
 .theme-category-title { font-weight: bold; color: var(--quote-color); cursor: pointer; padding: 8px 5px; background-color: rgba(0,0,0,0.15); border-radius: 4px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s; }
@@ -83,16 +32,7 @@
 
 .theme-list { display: flex; flex-direction: column; gap: 2px; padding-left: 0; margin-top: 5px; width: 100%; box-sizing: border-box; }
 .theme-list > .theme-item { width: 100%; box-sizing: border-box; padding: 8px; border-radius: 4px; list-style: none; color: var(--main-text-color); display: flex; justify-content: space-between; align-items: center; cursor: pointer; border: 2px solid transparent; transition: background-color 0.2s, border-color 0.2s; }
-
-/* 修复长文件名撑开布局的问题 */
-.theme-item-name { 
-    overflow-wrap: break-word; /* 允许在长单词或URL内部换行 */
-    word-break: break-all; /* 确保即使是没有空格的长字符串也能换行 */
-    flex-grow: 1; 
-    padding-right: 10px; 
-    min-width: 0; /* flex布局中的重要技巧，防止内容溢出 */
-}
-
+.theme-item-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; padding-right: 10px; }
 .theme-item:hover { background-color: rgba(128,128,128,0.2); }
 .theme-item.active { border-color: var(--quote-color); background-color: color-mix(in srgb, var(--quote-color) 20%, transparent); font-weight: bold; }
 .theme-item.selected-for-batch { background-color: var(--primary-color, #0056b3); color: white; }
@@ -130,7 +70,42 @@
 .link-bg-btn { color: var(--main-text-color); }
 .link-bg-btn.linked { color: var(--primary-color, #007bff); text-shadow: 0 0 5px var(--primary-color, #007bff); }
 
+#theme-manager-panel.manage-bg-mode .theme-category { display: none; }
+#theme-manager-panel.manage-bg-mode .theme-manager-actions:not(:has(#manage-bgs-btn)) { display: none; }
+#theme-manager-panel .bg_list { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px 0; justify-content: center; }
+#theme-manager-panel .bg_example { position: relative; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s; }
+#theme-manager-panel .bg_example:hover { border-color: var(--quote-color); }
+.bg-select-checkbox { position: absolute; top: 5px; left: 5px; width: 20px; height: 20px; z-index: 10; cursor: pointer; }
+#theme-manager-panel .bg_example.selected-for-batch { border-color: var(--primary-color, #007bff); box-shadow: 0 0 8px var(--primary-color, #007bff); }
+
+@media (max-width: 768px) {
+    .theme-list > .theme-item { width: 100%; box-sizing: border-box; flex-wrap: wrap; justify-content: flex-start; }
+    .theme-item-name { white-space: normal; overflow: visible; text-overflow: clip; min-width: 0; flex-grow: 1; }
+    .theme-item-buttons { margin-left: auto; flex-shrink: 0; }
+    #theme-manager-panel {
+        flex-basis: 100% !important;
+        max-width: none !important;
+    }
+    .tm-actions-grid, .tm-actions-group {
+        flex-wrap: wrap; /* 允许按钮组和内部按钮在移动端换行 */
+    }
+
+    .tm-actions-group {
+        flex-basis: 100%; /* 让每个按钮组在移动端都占满一行 */
+        justify-content: center; /* 居中对齐按钮 */
+    }
+
+    /* (可选) 如果你希望移动端的按钮文字也小一点 */
+    .tm-actions-grid button {
+        font-size: 0.9em;
+        padding: 4px 8px;
+    }
+}
+
+
 /* 背景管理模式下的样式 */
+#theme-manager-panel.manage-bg-mode .theme-category { display: none; }
+#theme-manager-panel.manage-bg-mode .theme-manager-actions:not(:has(#manage-bgs-btn)) { display: none; }
 #theme-manager-panel .bg_list { 
     display: flex; 
     flex-wrap: wrap; 
@@ -172,10 +147,4 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-}
-
-@media (max-width: 768px) {
-    .theme-list > .theme-item { width: 100%; box-sizing: border-box; flex-wrap: wrap; justify-content: flex-start; }
-    .theme-item-name { white-space: normal; overflow: visible; text-overflow: clip; min-width: 0; flex-grow: 1; }
-    .theme-item-buttons { margin-left: auto; flex-shrink: 0; }
 }
