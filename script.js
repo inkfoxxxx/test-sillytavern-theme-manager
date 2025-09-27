@@ -137,12 +137,20 @@
                                 <button id="expand-all-btn" title="展开所有文件夹">全部展开</button>
                                 <button id="collapse-all-btn" title="折叠所有文件夹">全部折叠</button>
                             </div>
+                            <!-- VVVVVVVVVVVV 新增代码 VVVVVVVVVVVV -->
                             <div class="tm-actions-group">
-                                <button id="manage-bgs-btn" title="管理背景图">🖼️ 管理背景</button>
                                 <button id="tm-export-settings-btn" title="导出一个包含所有插件设置的配置文件...">📤 导出配置</button>
                                 <button id="tm-import-settings-btn" title="从配置文件中导入插件设置...">📥 导入配置</button>
                             </div>
+                            <!-- ^^^^^^^^^^^^ 新增代码 ^^^^^^^^^^^^ -->
                         </div>
+                        
+                        <!-- ### 核心修改：将管理背景按钮单独放在外面 ### -->
+                        <div class="theme-manager-actions">
+                             <button id="manage-bgs-btn" title="管理背景图">🖼️ 管理背景</button>
+                        </div>
+                        <!-- ### 修改结束 ### -->
+                        
                         <div id="background-actions-bar" style="display:none;" data-mode="bg">
                             <button id="batch-import-bg-btn" class="menu_button menu_button_icon">➕ 批量导入背景</button>
                             <button id="batch-delete-bg-btn"  class="menu_button menu_button_icon" disabled>🗑️ 删除选中背景</button>
