@@ -94,12 +94,6 @@
         flex-basis: 100%; /* 让每个按钮组在移动端都占满一行 */
         justify-content: center; /* 居中对齐按钮 */
     }
-
-    /* (可选) 如果你希望移动端的按钮文字也小一点 */
-    .tm-actions-grid button {
-        font-size: 0.9em;
-        padding: 4px 8px;
-    }
 }
 
 
@@ -148,3 +142,4 @@
     height: 100%;
     object-fit: cover;
 }
+
