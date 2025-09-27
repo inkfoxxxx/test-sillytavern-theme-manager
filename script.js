@@ -123,18 +123,25 @@
                             <a id="theme-manager-refresh-page-btn" style="color:var(--primary-color, #007bff); text-decoration:underline; cursor:pointer; font-weight:bold;">刷新页面</a>。
                         </div>
                         <div class="theme-manager-actions" data-mode="theme">
-                            <input type="search" id="theme-search-box" placeholder="🔍 搜索主题...">
-                            <button id="random-theme-btn" title="随机应用一个主题">🎲 随机</button>
-                            <button id="batch-edit-btn" title="进入/退出批量编辑模式">🔧 批量编辑</button>
-                            <button id="batch-import-btn" title="从文件批量导入主题">📂 批量导入</button>
-                        </div>
-                        <div class="theme-manager-actions" data-mode="shared">
-                            <button id="reorder-mode-btn" title="调整文件夹顺序">🔄 调整顺序</button>
-                            <button id="expand-all-btn" title="展开所有文件夹">全部展开</button>
-                            <button id="collapse-all-btn" title="折叠所有文件夹">全部折叠</button>
-                            <button id="manage-bgs-btn" title="管理背景图">🖼️ 管理背景</button>
-                            <button id="tm-export-settings-btn" title="导出一个包含所有插件设置的配置文件，用于在不同设备间同步。">📤 导出配置</button>
-                            <button id="tm-import-settings-btn" title="从配置文件中导入插件设置。">📥 导入配置</button>
+                            <div class="tm-actions-grid">
+                            <div class="tm-actions-group">
+                                <input type="search" id="theme-search-box" placeholder="🔍 搜索主题...">
+                                <button id="random-theme-btn" title="随机应用一个主题">🎲 随机</button>
+                            </div>
+                            <div class="tm-actions-group">
+                                <button id="batch-edit-btn" title="进入/退出批量编辑模式">🔧 批量编辑</button>
+                                <button id="batch-import-btn" title="从文件批量导入主题">📂 批量导入</button>
+                            </div>
+                            <div class="tm-actions-group">
+                                <button id="reorder-mode-btn" title="调整文件夹顺序">🔄 调整顺序</button>
+                                <button id="expand-all-btn" title="展开所有文件夹">全部展开</button>
+                                <button id="collapse-all-btn" title="折叠所有文件夹">全部折叠</button>
+                            </div>
+                            <div class="tm-actions-group">
+                                <button id="manage-bgs-btn" title="管理背景图">🖼️ 管理背景</button>
+                                <button id="tm-export-settings-btn" title="导出一个包含所有插件设置的配置文件...">📤 导出配置</button>
+                                <button id="tm-import-settings-btn" title="从配置文件中导入插件设置...">📥 导入配置</button>
+                            </div>
                         </div>
                         <div id="background-actions-bar" style="display:none;" data-mode="bg">
                             <button id="batch-import-bg-btn" class="menu_button menu_button_icon">➕ 批量导入背景</button>
@@ -732,12 +739,11 @@
                     manageBgsBtn.classList.toggle('selected', isManageBgMode);
                     manageBgsBtn.textContent = isManageBgMode ? '完成管理' : '🖼️ 管理背景';
                 
-                    managerPanel.querySelector('[data-mode="theme"]').style.display = isManageBgMode ? 'none' : 'flex';
+                    // ### 核心修改：现在我们只控制一个容器的显示/隐藏 ###
+                    managerPanel.querySelector('.tm-actions-grid').style.display = isManageBgMode ? 'none' : 'flex';
+                    // ### 修改结束 ###
+
                     backgroundActionsBar.style.display = isManageBgMode ? 'flex' : 'none';
-                    
-                    reorderModeBtn.style.display = isManageBgMode ? 'none' : 'inline-block';
-                    expandAllBtn.style.display = isManageBgMode ? 'none' : 'inline-block';
-                    collapseAllBtn.style.display = isManageBgMode ? 'none' : 'inline-block';
                 
                     if (isManageBgMode) {
                         if (isBatchEditMode) batchEditBtn.click();
@@ -1341,5 +1347,4 @@
         }
     }, 250);
 })();
-
 
