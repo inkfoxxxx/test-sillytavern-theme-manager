@@ -6,6 +6,8 @@
     border: 1px solid var(--border-color); 
     width: 100%; 
     box-sizing: border-box;
+    flex-basis: 100% !important;
+    max-width: none !important;
 }
 
 #theme-manager-header { cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
@@ -82,20 +84,9 @@
     .theme-list > .theme-item { width: 100%; box-sizing: border-box; flex-wrap: wrap; justify-content: flex-start; }
     .theme-item-name { white-space: normal; overflow: visible; text-overflow: clip; min-width: 0; flex-grow: 1; }
     .theme-item-buttons { margin-left: auto; flex-shrink: 0; }
-    #theme-manager-panel {
-        flex-basis: 100% !important;
-        max-width: none !important;
-    }
-    .tm-actions-grid, .tm-actions-group {
-        flex-wrap: wrap; /* 允许按钮组和内部按钮在移动端换行 */
-    }
-
-    .tm-actions-group {
-        flex-basis: 100%; /* 让每个按钮组在移动端都占满一行 */
-        justify-content: center; /* 居中对齐按钮 */
-    }
 }
 
+/* 在 style (1).css 文件末尾添加以下内容 */
 
 /* 背景管理模式下的样式 */
 #theme-manager-panel.manage-bg-mode .theme-category { display: none; }
@@ -142,4 +133,3 @@
     height: 100%;
     object-fit: cover;
 }
-
