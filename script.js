@@ -744,6 +744,25 @@
                 });
                 
                 manageBgsBtn.addEventListener('click', () => {
+                  // 提前检查：如果正准备进入管理模式，但原生背景图尚未加载
+                  if (!isManageBgMode) { // `!isManageBgMode` 意味着我们正要从“非管理模式”切换到“管理模式”
+                      const nativeBgs = document.querySelectorAll('#bg_menu_content .bg_example, #bg_custom_content .bg_example');
+                      // 如果背景图数量小于等于1（通常只有“添加”按钮），说明未加载
+                      if (nativeBgs.length <= 1) {
+                          // 使用SillyTavern的通用弹窗功能，效果更好
+                          callGenericPopup(
+                              '<h3>💡 操作提示</h3>' +
+                              '<p>为了让插件能够读取到所有背景图，请在使用此功能前，进行一次“预加载”操作：</p>' +
+                              '<ol style="text-align: left; margin: 0 auto; max-width: 90%;">' +
+                              '   <li>点击顶栏的背景图管理按钮 (🖼️)。</li>' +
+                              '   <li>等待原生的背景选择面板完全展开，且确保你从头到尾过一遍，使所有背景图都显示出来。</li>' +
+                              '   <li>完成后，即可正常使用“管理背景”功能。</li>' +
+                              '</ol>',
+                              'info' // 'info' 类型只显示一个“OK”按钮
+                          );
+                          return; // 阻止后续代码执行，不进入管理模式
+                      }
+                  }
                     isManageBgMode = !isManageBgMode;
                     managerPanel.classList.toggle('manage-bg-mode', isManageBgMode);
                     manageBgsBtn.classList.toggle('selected', isManageBgMode);
@@ -1381,4 +1400,3 @@
         }
     }, 250);
 })();
-
