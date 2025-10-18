@@ -1073,7 +1073,7 @@
                         if (button && button.classList.contains('link-bg-btn')) {
                             isBindingMode = true;
                             themeNameToBind = themeName;
-                            document.querySelector('#logo_block .drawer-toggle').click();
+                            document.querySelector('#backgrounds-drawer-toggle').click();
                             toastr.info('请在背景面板中选择一张图片进行绑定。', '进入背景绑定模式');
                             return;
                         }
@@ -1189,7 +1189,7 @@
                     isBindingMode = false;
                     themeNameToBind = null;
                     
-                    document.querySelector('#logo_block .drawer-toggle').click();
+                    document.querySelector('#backgrounds-drawer-toggle').click();
 
                     setTimeout(() => {
                         const userSettingsPanel = document.querySelector('#user-settings-block');
