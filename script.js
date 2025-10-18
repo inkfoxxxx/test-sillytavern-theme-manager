@@ -148,6 +148,11 @@
                             <button id="batch-import-bg-btn" class="menu_button menu_button_icon">➕ 批量导入背景</button>
                             <button id="batch-delete-bg-btn"  class="menu_button menu_button_icon" disabled>🗑️ 删除选中背景</button>
                         </div>
+                        <!-- VVVVVV 在这里添加新的提示信息DIV VVVVVV -->
+                        <div id="bg-manager-notice" style="display:none; margin: 10px 0; padding: 10px; background-color: rgba(0, 123, 255, 0.1); border: 1px solid var(--primary-color, #007bff); border-radius: 5px; text-align: center; color: var(--main-text-color);">
+                            💡 <b>提示：</b>如果背景图列表为空，请先退出该模式，点击顶栏的背景图按钮(🖼️)，从头到尾全部滑动一遍，待所有背景都加载一遍后再使用此功能。
+                        </div>
+                        <!-- ^^^^^^ 新增DIV结束 ^^^^^^ -->
                         <div id="batch-actions-bar" style="display:none;" data-mode="theme">
                             <button id="batch-add-tag-btn">➕ 添加标签</button>
                             <button id="batch-move-tag-btn">➡️ 移动到分类</button>
@@ -744,25 +749,6 @@
                 });
                 
                 manageBgsBtn.addEventListener('click', () => {
-                  // 提前检查：如果正准备进入管理模式，但原生背景图尚未加载
-                  if (!isManageBgMode) { // `!isManageBgMode` 意味着我们正要从“非管理模式”切换到“管理模式”
-                      const nativeBgs = document.querySelectorAll('#bg_menu_content .bg_example, #bg_custom_content .bg_example');
-                      // 如果背景图数量小于等于1（通常只有“添加”按钮），说明未加载
-                      if (nativeBgs.length <= 1) {
-                          // 使用SillyTavern的通用弹窗功能，效果更好
-                          callGenericPopup(
-                              '<h3>💡 操作提示</h3>' +
-                              '<p>为了让插件能够读取到所有背景图，请在使用此功能前，进行一次“预加载”操作：</p>' +
-                              '<ol style="text-align: left; margin: 0 auto; max-width: 90%;">' +
-                              '   <li>点击顶栏的背景图管理按钮 (🖼️)。</li>' +
-                              '   <li>等待原生的背景选择面板完全展开，且确保你从头到尾过一遍，使所有背景图都显示出来。</li>' +
-                              '   <li>完成后，即可正常使用“管理背景”功能。</li>' +
-                              '</ol>',
-                              'info' // 'info' 类型只显示一个“OK”按钮
-                          );
-                          return; // 阻止后续代码执行，不进入管理模式
-                      }
-                  }
                     isManageBgMode = !isManageBgMode;
                     managerPanel.classList.toggle('manage-bg-mode', isManageBgMode);
                     manageBgsBtn.classList.toggle('selected', isManageBgMode);
@@ -782,6 +768,10 @@
                     // --- END: 修改结束 ---
 
                     backgroundActionsBar.style.display = isManageBgMode ? 'flex' : 'none';
+
+                    // VVVVVV 在这里添加控制提示显示/隐藏的代码 VVVVVV
+                    managerPanel.querySelector('#bg-manager-notice').style.display = isManageBg-mode ? 'block' : 'none';
+                    // ^^^^^^ 新增代码结束 ^^^^^^
     
                     // 隐藏/显示 'shared' 区域的按钮
                     const sharedActionsContainer = managerPanel.querySelector('[data-mode="shared"]');
