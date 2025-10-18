@@ -237,17 +237,20 @@
                                 content.style.maxHeight = '0px';
                                 content.style.paddingTop = '0px';
                                 content.style.paddingBottom = '0px';
+                                content.style.fontSize = '0';
                             });
                         } else {
                             content.style.maxHeight = '0px';
                             content.style.paddingTop = '0px';
                             content.style.paddingBottom = '0px';
+                            content.style.fontSize = '0';
                         }
                         toggleIcon.classList.add('collapsed');
                         localStorage.setItem(COLLAPSE_KEY, 'true');
                     } else {
                         content.style.paddingTop = '';
                         content.style.paddingBottom = '';
+                        content.style.fontSize = '';
                         if (animate) {
                             content.style.maxHeight = content.scrollHeight + 'px';
                             setTimeout(() => { content.style.maxHeight = ''; }, 300);
