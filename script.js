@@ -122,7 +122,6 @@
                             💡 <b>提示：</b>检测到文件变更（主题或背景图）。为确保所有更改完全生效，请在完成所有操作后
                             <a id="theme-manager-refresh-page-btn" style="color:var(--primary-color, #007bff); text-decoration:underline; cursor:pointer; font-weight:bold;">刷新页面</a>。
                         </div>
-                        // ..
                         <div class="theme-manager-actions" data-mode="theme">
                             <div class="tm-button-row">
                                 <input type="search" id="theme-search-box" placeholder="🔍 搜索主题...">
@@ -1382,3 +1381,4 @@
         }
     }, 250);
 })();
+
