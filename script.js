@@ -148,11 +148,6 @@
                             <button id="batch-import-bg-btn" class="menu_button menu_button_icon">➕ 批量导入背景</button>
                             <button id="batch-delete-bg-btn"  class="menu_button menu_button_icon" disabled>🗑️ 删除选中背景</button>
                         </div>
-                        <!-- VVVVVV 在这里添加新的提示信息DIV VVVVVV -->
-                        <div id="bg-manager-notice" style="display:none; margin: 10px 0; padding: 10px; background-color: rgba(0, 123, 255, 0.1); border: 1px solid var(--primary-color, #007bff); border-radius: 5px; text-align: center; color: var(--main-text-color);">
-                            💡 <b>提示：</b>如果背景图列表为空，请先退出该模式，点击顶栏的背景图按钮(🖼️)，从头到尾全部滑动一遍，待所有背景都加载一遍后再使用此功能。
-                        </div>
-                        <!-- ^^^^^^ 新增DIV结束 ^^^^^^ -->
                         <div id="batch-actions-bar" style="display:none;" data-mode="theme">
                             <button id="batch-add-tag-btn">➕ 添加标签</button>
                             <button id="batch-move-tag-btn">➡️ 移动到分类</button>
@@ -768,10 +763,6 @@
                     // --- END: 修改结束 ---
 
                     backgroundActionsBar.style.display = isManageBgMode ? 'flex' : 'none';
-
-                    // VVVVVV 在这里添加控制提示显示/隐藏的代码 VVVVVV
-                    managerPanel.querySelector('#bg-manager-notice').style.display = isManageBg-mode ? 'block' : 'none';
-                    // ^^^^^^ 新增代码结束 ^^^^^^
     
                     // 隐藏/显示 'shared' 区域的按钮
                     const sharedActionsContainer = managerPanel.querySelector('[data-mode="shared"]');
