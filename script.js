@@ -313,7 +313,13 @@
                     });
                 
                     contentWrapper.innerHTML = '';
-                    contentWrapper.appendChild(bgListContainer);
+                    // VVVVVV 在这里添加判断 VVVVVV
+                    if (bgListContainer.children.length === 0) {
+                        contentWrapper.innerHTML = '没有找到背景图。';
+                    } else {
+                        contentWrapper.appendChild(bgListContainer);
+                    }
+                    // ^^^^^^ 判断结束 ^^^^^^
                     contentWrapper.scrollTop = scrollTop;
                     batchDeleteBgBtn.disabled = selectedBackgrounds.size === 0;
                 }
@@ -740,14 +746,29 @@
                     managerPanel.classList.toggle('manage-bg-mode', isManageBgMode);
                     manageBgsBtn.classList.toggle('selected', isManageBgMode);
                     manageBgsBtn.textContent = isManageBgMode ? '完成管理' : '🖼️ 管理背景';
-                
-                    managerPanel.querySelector('[data-mode="theme"]').style.display = isManageBgMode ? 'none' : 'flex';
+
+                    // --- START: 修改这里的逻辑 ---
+                    // 获取所有在 [data-mode="theme"] 容器内的直接子元素（按钮和输入框）
+                    const themeActionsContainer = managerPanel.querySelector('[data-mode="theme"]');
+                    const elementsToToggle = themeActionsContainer.querySelectorAll('.tm-button-row > *');
+
+                    elementsToToggle.forEach(element => {
+                        // 当进入背景管理模式时，隐藏除了“管理背景”按钮之外的所有元素
+                        if (element.id !== 'manage-bgs-btn') {
+                            element.style.display = isManageBgMode ? 'none' : '';
+                        }
+                    });
+                    // --- END: 修改结束 ---
+
                     backgroundActionsBar.style.display = isManageBgMode ? 'flex' : 'none';
-                    
-                    reorderModeBtn.style.display = isManageBgMode ? 'none' : 'inline-block';
-                    expandAllBtn.style.display = isManageBgMode ? 'none' : 'inline-block';
-                    collapseAllBtn.style.display = isManageBgMode ? 'none' : 'inline-block';
-                
+    
+                    // 隐藏/显示 'shared' 区域的按钮
+                    const sharedActionsContainer = managerPanel.querySelector('[data-mode="shared"]');
+                    if(sharedActionsContainer) {
+                        sharedActionsContainer.style.display = isManageBgMode ? 'none' : 'flex';
+                    }
+
+
                     if (isManageBgMode) {
                         if (isBatchEditMode) batchEditBtn.click();
                         if (isReorderMode) reorderModeBtn.click();
