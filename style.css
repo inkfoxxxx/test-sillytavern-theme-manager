@@ -133,3 +133,93 @@
     height: 100%;
     object-fit: cover;
 }
+
+/* ======== START: 针对新问题的补充和优化样式 ======== */
+
+/* --- 问题1: 用户设置页面强制三列布局 --- */
+#user-settings-block-content.force-three-columns > .flex-container {
+    flex-basis: 33.33% !important;
+    max-width: 33.33% !important;
+    flex-grow: 1;
+    padding: 0 5px; /* 增加一些间距避免挤在一起 */
+}
+
+/* --- 问题1: 插件内部长名称换行和截断 --- */
+/* 当容器宽度不足时，允许主题项内容换行 */
+.theme-list > .theme-item {
+    flex-wrap: wrap; 
+}
+/* 强制名称在一行内显示，超出部分用省略号代替 */
+.theme-item-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0; /* 允许flex item收缩的关键 */
+    flex-basis: 100%; /* 在换行时占据整行宽度 */
+}
+/* 按钮组在换行后靠右对齐 */
+.theme-item-buttons {
+    margin-left: auto;
+    flex-basis: 100%; /* 确保按钮组可以占据整行 */
+    justify-content: flex-end; /* 按钮靠右 */
+    padding-top: 5px; /* 与名称拉开一点距离 */
+}
+
+
+/* --- 问题2: 插件内部操作按钮重新布局 --- */
+.theme-manager-actions {
+    flex-direction: column; /* 让按钮行垂直排列 */
+}
+.tm-button-row {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+}
+.tm-button-row:not(:last-child) {
+    margin-bottom: 8px;
+}
+/* 第一行：搜索框自适应，按钮固定宽度 */
+.tm-button-row #theme-search-box {
+    flex-grow: 1;
+}
+.tm-button-row #random-theme-btn {
+    flex-grow: 0;
+}
+/* 其他行：按钮平均分配宽度 */
+.tm-button-row button {
+    flex-grow: 1;
+    flex-basis: 0; /* 让flex-grow生效的关键 */
+}
+
+
+/* --- 问题3: 修复背景管理中缩略图过小的问题 --- */
+#theme-manager-panel .bg_list {
+    max-height: 50vh; /* 限制最大高度，出现滚动条 */
+    overflow-y: auto;
+    align-content: flex-start; /* 防止在容器内垂直居中 */
+}
+
+#theme-manager-panel .bg_example {
+    width: 120px; /* 给缩略图一个固定的宽度 */
+    height: 67.5px; /* 保持16:9的比例 */
+    flex-shrink: 0; /* 防止被压缩 */
+}
+
+#theme-manager-panel .bg_example .bg_example_img,
+#theme-manager-panel .bg_example .bg_example_vid {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 确保图片或视频能覆盖整个容器而不变形 */
+}
+
+/* 移除你之前添加的重复代码，只保留这部分 */
+#theme-manager-panel.manage-bg-mode .theme-category,
+#theme-manager-panel.manage-bg-mode .theme-manager-actions:not(:has(#manage-bgs-btn)) { 
+    display: none; 
+}
+.bg-select-checkbox { 
+    accent-color: var(--primary-color, #007bff);
+}
+
+/* ======== END: 补充和优化样式 ======== */
