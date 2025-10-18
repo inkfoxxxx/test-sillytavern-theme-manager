@@ -256,9 +256,10 @@
                 
                     const bgListContainer = document.createElement('div');
                     bgListContainer.className = 'bg_list';
-                
-                    const systemBgs = document.querySelectorAll('#bg_menu_content .bg_example');
-                    const customBgs = document.querySelectorAll('#bg_custom_content .bg_example');
+
+                    // ### 修改：更新背景图的选择器 ###
+                    const systemBgs = document.querySelectorAll('#bg_menu_content .bg_example.flex-container');
+                    const customBgs = document.querySelectorAll('#bg_custom_content .bg_example.flex-container');
                 
                     const allBgs = [...systemBgs, ...customBgs];
                 
@@ -1154,7 +1155,7 @@
                     const newThemeName = event.target.value;
                     const boundBg = themeBackgroundBindings[newThemeName];
                     if (boundBg) {
-                        const bgElement = document.querySelector(`#bg_menu_content .bg_example[bgfile="${boundBg}"], #bg_custom_content .bg_example[bgfile="${boundBg}"]`);
+                        const bgElement = document.querySelector(`#bg_menu_content .bg_example.flex-container[bgfile="${boundBg}"], #bg_custom_content .bg_example.flex-container[bgfile="${boundBg}"]`);
                         if (bgElement) {
                             bgElement.click();
                         }
@@ -1177,7 +1178,7 @@
                     e.preventDefault();
                     e.stopPropagation();
 
-                    const bgElement = e.target.closest('.bg_example');
+                    const bgElement = e.target.closest('.bg_example.flex-container');
                     if (!bgElement) return;
 
                     const bgFileName = bgElement.getAttribute('bgfile');
@@ -1201,8 +1202,7 @@
                     await buildThemeUI();
                 };
 
-                if (bgMenuContent) bgMenuContent.addEventListener('click', bgObserverCallback, true);
-                if (bgCustomContent) bgCustomContent.addEventListener('click', bgObserverCallback, true);
+
 
                 // ==========================================================
                 // ========= 新增功能：角色卡绑定美化 (Character Theme Binding) =========
@@ -1316,6 +1316,31 @@
                 // ======================= 功能结束 =========================
                 // ==========================================================
 
+                // ### 修改：使用 MutationObserver 动态附加事件监听器 ###
+                const attachBgObserver = (containerId) => {
+                    const container = document.getElementById(containerId);
+                    if (!container) return;
+
+                    const observer = new MutationObserver((mutations) => {
+                        for (const mutation of mutations) {
+                            if (mutation.type === 'childList') {
+                                const bgList = container.querySelector('.bg_list');
+                                // 确保 bgList 存在且还没有被监听
+                                if (bgList && !bgList.dataset.themeManagerListener) {
+                                    bgList.addEventListener('click', bgObserverCallback, true);
+                                    bgList.dataset.themeManagerListener = 'true'; // 添加一个标记，防止重复监听
+                                    console.log(`Theme Manager: 成功为 #${containerId} .bg_list 附加事件监听器。`);
+                                }
+                            }
+                        }
+                    });
+
+                    observer.observe(container, { childList: true, subtree: true });
+                };
+
+                attachBgObserver('bg_menu_content');
+                attachBgObserver('bg_custom_content');
+                // ### 修改结束 ###
 
                 buildThemeUI().then(() => {
                     // 动态添加“绑定主题”按钮
