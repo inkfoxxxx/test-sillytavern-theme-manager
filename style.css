@@ -17,7 +17,7 @@
 #theme-manager-toggle-icon.collapsed { transform: rotate(-90deg); }
 #theme-manager-content { transition: max-height 0.3s ease-in-out; overflow: hidden; }
 #UI-presets-block { gap: 0 !important; }
-.theme-manager-actions { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+.theme-manager-actions { display: flex; margin: 10px 0; flex-wrap: wrap; }
 .theme-manager-actions input[type="search"] { flex-grow: 1; background-color: var(--black30a); border: 1px solid var(--SmartThemeBorderColor); color: var(--SmartThemeBodyColor); border-radius: 4px; padding: 5px 8px; min-width: 150px; }
 .theme-manager-actions button, #batch-actions-bar button { padding: 5px 10px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; white-space: nowrap; }
 .theme-manager-actions button.selected, #batch-actions-bar button { background-color: var(--primary-color, #007bff); color: white; border-color: transparent; }
@@ -164,3 +164,4 @@
 }
 
 /* ======== END: 最终优化样式 ======== */
+
