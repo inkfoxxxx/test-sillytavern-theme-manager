@@ -1,9 +1,7 @@
 /* 主题仪表盘 (v.25) 样式 */
 
 #theme-manager-panel { 
-    background-color: var(--SmartThemeBlurTintColor); 
     border-radius: 8px; 
-    border: 1px solid var(--SmartThemeBorderColor); 
     width: 100%; 
     box-sizing: border-box;
     flex-basis: 100% !important;
@@ -164,6 +162,7 @@
 }
 
 /* ======== END: 最终优化样式 ======== */
+
 
 
 
