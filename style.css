@@ -12,13 +12,13 @@
 
 #theme-manager-header { cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
 #theme-manager-header:hover { background-color: rgba(0,0,0,0.05); } 
-#theme-manager-header h4 { margin: 0; border: none; padding: 0; color: var(--main-text-color); background:none; }
-#theme-manager-toggle-icon { transition: transform 0.3s ease; color: var(--main-text-color); }
+#theme-manager-header h4 { margin: 0; border: none; padding: 0; color: var(--SmartThemeBodyColor); background:none; }
+#theme-manager-toggle-icon { transition: transform 0.3s ease; color: var(--SmartThemeBodyColor); }
 #theme-manager-toggle-icon.collapsed { transform: rotate(-90deg); }
 #theme-manager-content { transition: max-height 0.3s ease-in-out; overflow: hidden; }
 #UI-presets-block { gap: 0 !important; }
 .theme-manager-actions { display: flex; flex-wrap: wrap; }
-.theme-manager-actions input[type="search"] { flex-grow: 1; background-color: var(--SmartThemeUnderlineColor); border: 1px solid var(--SmartThemeBorderColor); color: var(--SmartThemeBodyColor); border-radius: 4px; min-width: 150px; max-height: 30px;  }
+.theme-manager-actions input[type="search"] { flex-grow: 1; background-color: var(--SmartThemeBlurTintColor); border: 1px solid var(--SmartThemeBorderColor); color: var(--SmartThemeBodyColor); border-radius: 4px; min-width: 150px; }
 .theme-manager-actions button, #batch-actions-bar button { padding: 5px 10px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; white-space: nowrap; }
 .theme-manager-actions button.selected, #batch-actions-bar button { background-color: var(--primary-color, #007bff); color: white; border-color: transparent; }
 #batch-actions-bar, #background-actions-bar { display: none; flex-wrap: wrap; gap: 8px; background-color: transparent; padding: 0; border-radius: 4px; margin-bottom: 10px; }
@@ -82,7 +82,6 @@
 /* --- 插件内部操作按钮重新布局 --- */
 .theme-manager-actions {
     flex-direction: column; /* 让按钮行垂直排列 */
-    gap: 8px; /* 统一行间距 */
 }
 .tm-button-row {
     display: flex;
@@ -164,6 +163,7 @@
 }
 
 /* ======== END: 最终优化样式 ======== */
+
 
 
 
