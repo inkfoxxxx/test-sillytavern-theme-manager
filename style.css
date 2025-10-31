@@ -1,4 +1,4 @@
-/* 主题仪表盘 (v21.6 Adaptive Checkmark) 样式 */
+/* 主题仪表盘 (v.25) 样式 */
 
 #theme-manager-panel { 
     background-color: var(--blur-tint-color); 
@@ -18,9 +18,8 @@
 #theme-manager-content { transition: max-height 0.3s ease-in-out; overflow: hidden; }
 #UI-presets-block { gap: 0 !important; }
 .theme-manager-actions { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
-.theme-manager-actions input[type="search"] { flex-grow: 1; background-color: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--main-text-color); border-radius: 4px; padding: 5px 8px; min-width: 150px; }
-.theme-manager-actions button, #batch-actions-bar button { background-color: rgba(128,128,128,0.2); color: var(--main-text-color); border: 1px solid var(--border-color); padding: 5px 10px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; white-space: nowrap; }
-.theme-manager-actions button:hover, #batch-actions-bar button:hover { background-color: rgba(128,128,128,0.4); }
+.theme-manager-actions input[type="search"] { flex-grow: 1; background-color: var(--black30a); border: 1px solid var(--SmartThemeBorderColor); color: var(--SmartThemeBodyColor); border-radius: 4px; padding: 5px 8px; min-width: 150px; }
+.theme-manager-actions button, #batch-actions-bar button { padding: 5px 10px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; white-space: nowrap; }
 .theme-manager-actions button.selected, #batch-actions-bar button { background-color: var(--primary-color, #007bff); color: white; border-color: transparent; }
 #batch-actions-bar, #background-actions-bar { display: none; flex-wrap: wrap; gap: 8px; background-color: transparent; padding: 0; border-radius: 4px; margin-bottom: 10px; }
 #batch-actions-bar.visible, #background-actions-bar.visible { display: flex; }
