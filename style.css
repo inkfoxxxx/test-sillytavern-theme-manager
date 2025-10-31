@@ -18,7 +18,7 @@
 #theme-manager-content { transition: max-height 0.3s ease-in-out; overflow: hidden; }
 #UI-presets-block { gap: 0 !important; }
 .theme-manager-actions { display: flex; flex-wrap: wrap; }
-.theme-manager-actions input[type="search"] { flex-grow: 1; background-color: var(--SmartThemeBlurTintColor); border: 1px solid var(--SmartThemeBorderColor); color: var(--SmartThemeBodyColor); border-radius: 4px; min-width: 150px; }
+.theme-manager-actions input[type="search"] { flex-grow: 1; background-color: var(--SmartThemeBlurTintColor); border: 1px solid var(--SmartThemeBorderColor); color: var(--SmartThemeBodyColor); border-radius: 4px; min-width: 150px; max-hight: 30px; }
 .theme-manager-actions button, #batch-actions-bar button { padding: 5px 10px; border-radius: 4px; cursor: pointer; transition: background-color 0.2s; white-space: nowrap; }
 .theme-manager-actions button.selected, #batch-actions-bar button { background-color: var(--SmartThemeBodyColor, #007bff); color: white; border-color: transparent; }
 #batch-actions-bar, #background-actions-bar { display: none; flex-wrap: wrap; gap: 8px; background-color: transparent; padding: 0; border-radius: 4px; margin-bottom: 10px; }
@@ -91,6 +91,7 @@
 /* 第一行：搜索框自适应，按钮固定宽度 */
 .tm-button-row #theme-search-box {
     flex-grow: 1;
+    justify-content: center;
 }
 .tm-button-row #random-theme-btn {
     flex-grow: 0;
@@ -163,6 +164,7 @@
 }
 
 /* ======== END: 最终优化样式 ======== */
+
 
 
 
