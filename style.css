@@ -22,7 +22,7 @@
 #batch-actions-bar, #background-actions-bar { display: none; flex-wrap: wrap; gap: 8px; background-color: transparent; padding: 0; border-radius: 4px; margin-bottom: 10px; }
 #batch-actions-bar.visible, #background-actions-bar.visible { display: flex; }
 #native-buttons-container { display: flex; gap: 5px; margin-left: auto; }
-.theme-category-title { font-weight: bold; color: var(--SmartThemeBodyColor); cursor: pointer; padding: 8px 5px; background-color: rgba(0,0,0,0.15); border-radius: 4px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s; }
+.theme-category-title { font-weight: bold; color: var(--SmartThemeBodyColor); cursor: pointer; padding: 8px 5px; background-color: (var(--tab-bg), rgba(255.255.255.0.1)); border-radius: 4px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s; }
 .dissolve-folder-btn { background: none; border: none; color: var(--danger-color, #ff5555); cursor: pointer; font-size: 14px; opacity: 0.7; }
 
 .folder-buttons { display: flex; gap: 8px; align-items: center; }
@@ -162,6 +162,7 @@
 }
 
 /* ======== END: 最终优化样式 ======== */
+
 
 
 
