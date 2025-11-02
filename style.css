@@ -67,7 +67,7 @@
 
 .link-bg-btn, .unbind-bg-btn { font-family: 'Font Awesome 6 Free'; font-weight: 900; }
 .link-bg-btn { color: var(--SmartThemeBodyColor); }
-.link-bg-btn.linked { color: var(--SmartThemeQuoteColor), #007bff; text-shadow: 0 0 5px var(--SmartThemeQuoteColor), #007bff; }
+.link-bg-btn.linked { color: var(--SmartThemeQuoteColor, #007bff); text-shadow: 0 0 5px var(--SmartThemeQuoteColor, #007bff); }
 
 @media (max-width: 768px) {
     .theme-list > .theme-item { width: 100%; box-sizing: border-box; flex-wrap: wrap; justify-content: flex-start; }
@@ -162,6 +162,7 @@
 }
 
 /* ======== END: 最终优化样式 ======== */
+
 
 
 
