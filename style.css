@@ -46,11 +46,11 @@
 #theme-manager-panel.batch-edit-mode .theme-category-title { cursor: pointer; }
 #theme-manager-panel.batch-edit-mode .theme-category-title:hover { background-color: rgba(255, 255, 255, 0.1); }
 #theme-manager-panel.batch-edit-mode .folder-buttons { display: none; }
-#theme-manager-panel.batch-edit-mode .folder-select-checkbox { display: inline-block; position: relative; -webkit-appearance: none; appearance: none; background-color: transparent; border: 1px solid var(--SmartThemeBorderColor, #888); box-shadow: 0 0 5px #888; border-radius: 3px; width: 15px; height: 15px; margin-right: 8px; cursor: pointer; transition: background-color 0.2s, border-color 0.2s; }
+#theme-manager-panel.batch-edit-mode .folder-select-checkbox { display: inline-block; position: relative; -webkit-appearance: none; appearance: none; background-color: transparent; border: 1px solid var(--SmartThemeBorderColor, #888); border-radius: 3px; width: 15px; height: 15px; margin-right: 8px; cursor: pointer; transition: background-color 0.2s, border-color 0.2s; }
 #theme-manager-panel.batch-edit-mode .folder-select-checkbox::before { content: '✔'; position: absolute; top: 48%; left: 50%; transform: translate(-50%, -50%) scale(0); font-size: 14px; font-weight: bold; color: var(--SmartThemeCheckboxTickColorValue, white); transition: transform 0.1s ease-in-out; }
 #theme-manager-panel.batch-edit-mode .folder-select-checkbox:checked::before { transform: translate(-50%, -50%) scale(1); }
-.theme-category-title.selected-for-batch { background-color: var(--SmartThemeBodyColor, #0056b3); color: white; }
-.theme-category-title.selected-for-batch:hover { background-color: color-mix(in srgb, var(--SmartThemeBodyColor, #0056b3) 90%, white); }
+.theme-category-title.selected-for-batch { background-color: var(--SmartThemeBodyColor, #0056b3); color: #dadee1; }
+.theme-category-title.selected-for-batch:hover { background-color: color-mix(in srgb, var(--SmartThemeBodyColor, #0056b3) 90%, #dadee1); }
 .theme-category-title.selected-for-batch span { color: white; }
 .theme-category-title.selected-for-batch .folder-select-checkbox { border-color: white; }
 .theme-category-title.selected-for-batch .folder-select-checkbox:checked { background-color: rgba(255, 255, 255, 0.3); }
@@ -67,7 +67,7 @@
 
 .link-bg-btn, .unbind-bg-btn { font-family: 'Font Awesome 6 Free'; font-weight: 900; }
 .link-bg-btn { color: var(--SmartThemeBodyColor); }
-.link-bg-btn.linked { color: #007bff; text-shadow: 0 0 5px #007bff; }
+.link-bg-btn.linked { color: var(--SmartThemeQuoteColor, #007bff); text-shadow: 0 0 5px var(--SmartThemeQuoteColor, #007bff) !important; }
 
 @media (max-width: 768px) {
     .theme-list > .theme-item { width: 100%; box-sizing: border-box; flex-wrap: wrap; justify-content: flex-start; }
@@ -161,29 +161,10 @@
     object-fit: cover; /* 这是关键，它能让图片/视频覆盖整个容器而不变形 */
 }
 
+/* --- 修复：为批量编辑按钮的白色文字添加阴影，确保可读性 --- */
+.theme-manager-actions button.selected, 
+#batch-actions-bar button {
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.8); /* 添加柔和的深色文字阴影 */
+}
+
 /* ======== END: 最终优化样式 ======== */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
