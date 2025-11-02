@@ -49,7 +49,7 @@
 #theme-manager-panel.batch-edit-mode .folder-select-checkbox { display: inline-block; position: relative; -webkit-appearance: none; appearance: none; background-color: transparent; border: 1px solid var(--SmartThemeBorderColor, #888); box-shadow: 0 0 5px #888; border-radius: 3px; width: 15px; height: 15px; margin-right: 8px; cursor: pointer; transition: background-color 0.2s, border-color 0.2s; }
 #theme-manager-panel.batch-edit-mode .folder-select-checkbox::before { content: '✔'; position: absolute; top: 48%; left: 50%; transform: translate(-50%, -50%) scale(0); font-size: 14px; font-weight: bold; color: var(--SmartThemeCheckboxTickColorValue, white); transition: transform 0.1s ease-in-out; }
 #theme-manager-panel.batch-edit-mode .folder-select-checkbox:checked::before { transform: translate(-50%, -50%) scale(1); }
-.theme-category-title.selected-for-batch { background-color: var(--SmartThemeBodyColor, #0056b3); color: #dadee1; text-shadow: 0 0 5px #000000; }
+.theme-category-title.selected-for-batch { background-color: var(--SmartThemeBodyColor, #0056b3); color: #dadee1; -webkit-text-stroke: 1px #000000; }
 .theme-category-title.selected-for-batch:hover { background-color: color-mix(in srgb, var(--SmartThemeBodyColor, #0056b3) 90%, #dadee1); }
 .theme-category-title.selected-for-batch span { color: white; }
 .theme-category-title.selected-for-batch .folder-select-checkbox { border-color: white; }
@@ -67,7 +67,7 @@
 
 .link-bg-btn, .unbind-bg-btn { font-family: 'Font Awesome 6 Free'; font-weight: 900; }
 .link-bg-btn { color: var(--SmartThemeBodyColor); }
-.link-bg-btn.linked { color: var(--SmartThemeQuoteColor, #007bff); text-shadow: 0 0 5px var(--SmartThemeQuoteColor, #007bff); }
+.link-bg-btn.linked { color: var(--SmartThemeQuoteColor, #007bff); box-shadow: 0 0 5px var(--SmartThemeQuoteColor, #007bff); }
 
 @media (max-width: 768px) {
     .theme-list > .theme-item { width: 100%; box-sizing: border-box; flex-wrap: wrap; justify-content: flex-start; }
@@ -162,6 +162,7 @@
 }
 
 /* ======== END: 最终优化样式 ======== */
+
 
 
 
