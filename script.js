@@ -1352,6 +1352,38 @@
                     }, 50);
                 });
 
+                // 监听欢迎页面“最近的聊天”列表的点击事件，以自动应用美化
+                document.getElementById('chat').addEventListener('click', (event) => {
+                    // 1. 检查点击的是否是聊天记录项
+                    const recentChatBlock = event.target.closest('.recentChat');
+
+                    // 如果不是，或者找不到，就直接退出
+                    if (!recentChatBlock) return;
+
+                    // 2. 从 data-avatar 属性直接获取角色头像文件名
+                    const characterAvatar = recentChatBlock.dataset.avatar;
+                    if (!characterAvatar) return;
+
+                    // 使用一个短暂的延时，确保SillyTavern的其他点击处理已完成
+                    setTimeout(() => {
+                        // 3. 接下来的逻辑与你已有的功能完全相同
+                        const bindings = JSON.parse(localStorage.getItem(CHARACTER_THEME_BINDINGS_KEY)) || {};
+                        const boundTheme = bindings[characterAvatar];
+
+                        if (boundTheme) {
+                            const themeSelect = document.querySelector('#themes');
+                            const themeOption = themeSelect.querySelector(`option[value="${boundTheme}"]`);
+
+                            if (themeOption && themeSelect.value !== boundTheme) {
+                                console.log(`[Theme Manager] 从欢迎页应用绑定的美化: ${boundTheme}`);
+                                themeSelect.value = boundTheme;
+                                themeSelect.dispatchEvent(new Event('change'));
+                                toastr.info(`已自动应用角色绑定的美化：<b>${boundTheme}</b>`, '', {timeOut: 2000, escapeHtml: false});
+                            }
+                        }
+                    }, 50); // 50毫秒的延时通常足够了
+                });
+
                 // ==========================================================
                 // ======================= 功能结束 =========================
                 // ==========================================================
@@ -1381,3 +1413,4 @@
         }
     }, 250);
 })();
+
